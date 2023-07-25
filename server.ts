@@ -9,27 +9,21 @@ import cookieParser from "cookie-parser";
 import connectDB from "./config/connectDB";
 import corsOptions from "./config/corsOptions";
 import credentials from "./middleware/credentials";
-import { reqLogger, errLogger } from "./middleware/loggers";
-import registerRoute from "./routes/register";
-import authRoute from "./routes/auth";
-import logoutRoute from "./routes/logout";
-import refreshRoute from "./routes/refresh";
+import authRoute from "./routes/api/auth";
 import postsRoute from "./routes/api/posts";
+import usersRoute from "./routes/api/users";
+import rootRoute from "./routes/root";
 
-// Initialize App
+// -------------------- INITIALIZATION -------------------- //
 dotenv.config();
 const app: Express = express();
 const port: string = process.env.PORT || "8080";
-
-// Connect to MongoDB
 connectDB();
 
+// ---------------------- MIDDLEWARE ---------------------- //
 // Handle Cross-Origin Resource Sharing
 app.use(cors(corsOptions));
 app.use(credentials);
-
-// Log Requests
-app.use(reqLogger);
 
 // Handle Unencoded Form Data
 app.use(express.urlencoded({ extended: false }));
@@ -40,22 +34,20 @@ app.use(express.json());
 // Parse cookies
 app.use(cookieParser());
 
-// Handle User Registration
-app.use("/register", registerRoute);
-// Handle User Authentication
-app.use("/auth", authRoute);
-// Handle User Logout
-app.use("/logout", logoutRoute);
-// Refresh the Access Token
-app.use("/refresh", refreshRoute);
+// ------------------------ ROUTES ------------------------ //
+// User Authentication
+app.use("/api/auth", authRoute);
 
 // CRUD Post Operations
-app.use("/posts", postsRoute);
+app.use("/api/posts", postsRoute);
 
-// Log Errors
-app.use(errLogger);
+// CRUD User Operations
+app.use("/api/users", usersRoute);
 
-// Listen for Requests
+// Root Redirect
+app.use("/*", rootRoute);
+
+// ---------------- LISTEN FOR CONNECTIONS ---------------- //
 mongoose.connection.once("open", () => {
     console.log("[server]: Connected to MongoDB");
 

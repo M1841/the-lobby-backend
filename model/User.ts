@@ -1,13 +1,6 @@
 // Third-Party Modules
 import { Schema, model } from "mongoose";
 
-interface IUser {
-    username: string;
-    email: string;
-    password: string;
-    refreshToken: string[];
-}
-
 const userSchema = new Schema<IUser>({
     username: {
         type: String,

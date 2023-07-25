@@ -8,6 +8,7 @@ import {
     createPost,
     readPost,
     readAllPosts,
+    readAllPostsByUser,
     updatePost,
     deletePost,
 } from "../../controller/postsController";
@@ -18,6 +19,7 @@ router
     .get(readAllPosts)
     .put(verifyJWT, updatePost)
     .delete(verifyJWT, deletePost);
-router.route("/:id").get(readPost);
+router.get("/:id", readPost);
+router.get("/user/:id", readAllPostsByUser);
 
 export default router;
