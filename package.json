@@ -1,12 +1,12 @@
 {
   "name": "the-lobby-backend",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "An open-source social media platform",
-  "main": "/build/server.js",
+  "main": "./build/index.js",
   "scripts": {
     "build": "npx tsc",
-    "start": "node build/server",
-    "dev": "concurrently \"npx tsc --watch\" \"nodemon build/server.js\""
+    "start": "node ./build/index",
+    "dev": "concurrently \"npx tsc --watch\" \"nodemon ./build/index.js\""
   },
   "author": "Mihai Daniel Mureșan",
   "license": "MIT",

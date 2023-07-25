@@ -9,6 +9,7 @@
 -   [Endpoints](#endpoints)
     -   [Root](#root)
         -   [GET /](#github-redirect)
+        -   [GET /hello](#hello-world)
     -   [Auth](#auth)
         -   [POST /api/auth/login](#login)
         -   [GET /api/auth/logout](#logout)
@@ -96,6 +97,12 @@ npm run dev
 -   Description: Redirects to the GitHub repository of the project
 -   Request Body: `None`
 -   Response Body: `None`
+
+`GET /hello`
+
+-   Description: Returns a simple "Hello World" message. This is just a test endpoint to make sure the server is running.
+-   Request Body: `None`
+-   Response Body: `Hello World!`
 
 ### Auth
 

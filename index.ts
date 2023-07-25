@@ -44,6 +44,9 @@ app.use("/api/posts", postsRoute);
 // CRUD User Operations
 app.use("/api/users", usersRoute);
 
+// Test Hello World Route
+app.get("/hello", (req: Request, res: Response) => res.send("Hello World!"));
+
 // Root Redirect
 app.use("/*", rootRoute);
 
