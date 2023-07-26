@@ -6,25 +6,39 @@ import mongoose from "mongoose";
 // Internal Modules
 import User from "../model/User";
 
+const isValidID = mongoose.Types.ObjectId.isValid;
+
 // ------------------------ CREATE ------------------------ //
-const createUser = async (req: Request, res: Response) => {
+const createNewUser = async (req: Request, res: Response) => {
     const { username, email, password } = req.body;
 
     // check for the required attributes
     if (!username || !email || !password) {
-        // send a "Bad Request" status and a descriptive message
-        res.status(400).json({
-            message: "Missing required attributes",
-        });
+        let missingFields: {
+            username?: string;
+            email?: string;
+            password?: string;
+        } = {};
+        if (!username) missingFields.username = "missing";
+        if (!email) missingFields.email = "missing";
+        if (!password) missingFields.password = "missing";
+        // 400 Bad Request
+        return res.status(400).json(missingFields);
     }
 
     try {
         // check for duplicate usernames or emails
-        const isDuplicateUsername = await User.findOne({ username }).exec();
-        const isDuplicateEmail = await User.findOne({ email }).exec();
-        if (isDuplicateUsername || isDuplicateEmail) {
-            // send a "Conflict" status
-            return res.sendStatus(409);
+        const isUsernameTaken = await User.findOne({ username }).exec();
+        const isEmailTaken = await User.findOne({ email }).exec();
+        if (isUsernameTaken || isEmailTaken) {
+            let takenFields: {
+                username?: string;
+                email?: string;
+            } = {};
+            if (isUsernameTaken) takenFields.username = "taken";
+            if (isEmailTaken) takenFields.email = "taken";
+            // 409 Conflict
+            return res.status(409).send(takenFields);
         }
         // encrypt the password
         const encryptedPassword = await bcrypt.hash(password, 10);
@@ -36,24 +50,43 @@ const createUser = async (req: Request, res: Response) => {
             password: encryptedPassword,
         });
 
-        // send a "Created" status and a descriptive message
-        res.status(201).json({
-            message: `New user ${username} was registered`,
-        });
+        // 201 Created
+        return res.sendStatus(201);
     } catch (err: unknown) {
-        // send an "Internal Server Error" status and the error message
-        res.status(500).json(err);
+        // 500 Internal Server Errror
+        return res.status(500).json(err);
     }
 };
 
 // ------------------------- READ ------------------------- //
-const readUser = async (req: Request, res: Response) => {
-    // check if the ID is missing or incorrectly formatted
-    if (!req?.params?.id || !mongoose.Types.ObjectId.isValid(req?.params?.id)) {
-        // send a "Bad Request" status and a descriptive message
-        return res.status(400).json({
-            message: "ID parameter is missing or incorrectly formatted",
+const readAllUsers = async (req: Request, res: Response) => {
+    try {
+        const users = await User.find();
+        // check if no users were found
+        if (!users || users.length < 1) {
+            // 204 No Content
+            return res.sendStatus(204);
+        }
+
+        // send back public user information
+        const publicUsers: IPublicUser[] = users.map((user) => {
+            const { _id, username } = user;
+            return { _id, username };
         });
+
+        // 200 OK
+        return res.json(publicUsers);
+    } catch (err: unknown) {
+        // 500 Internal Server Error
+        return res.status(500).json(err);
+    }
+};
+
+const readUserById = async (req: Request, res: Response) => {
+    // check if the ID is missing or incorrectly formatted
+    if (!req?.params?.id || !isValidID(req?.params?.id)) {
+        // 400 Bad Request
+        return res.status(400).send("Invalid user ID");
     }
 
     try {
@@ -61,124 +94,92 @@ const readUser = async (req: Request, res: Response) => {
 
         // check if no user was found
         if (!user) {
-            // send a "No Content" status and a descriptive message
-            return res
-                .status(204)
-                .json({ message: `No user matches ID = ${req.params.id}` });
+            // 404 Not Found
+            return res.status(404).send("User does not exist");
         }
 
-        res.json({ id: user._id, username: user.username });
+        return res.json({ _id: user._id, username: user.username });
     } catch (err: unknown) {
-        // send an "Internal Server Error" status and the error message
-        res.status(500).json(err);
-    }
-};
-
-const readAllUsers = async (req: Request, res: Response) => {
-    try {
-        const users = await User.find();
-        // check if no users were found
-        if (!users || users.length < 1) {
-            // send a "No Content" status and a descriptive message
-            return res.status(204).json({ message: "No users were found" });
-        }
-
-        // only send back the public data
-        const publicUsers: IPublicUser[] = users.map((user) => {
-            const { _id, username } = user;
-            return { id: _id.toString(), username };
-        });
-        res.json(publicUsers);
-    } catch (err: unknown) {
-        // send an "Internal Server Error" status and the error message
-        res.status(500).json(err);
+        // 500 Internal Server Error
+        return res.status(500).json(err);
     }
 };
 
 // ------------------------ UPDATE ------------------------ //
-const updateUser = async (req: Request, res: Response) => {
+const updateUserById = async (req: Request, res: Response) => {
     // check if the ID is missing or incorrectly formatted
-    if (!req?.body?.id || !mongoose.Types.ObjectId.isValid(req?.body?.id)) {
-        // send a "Bad Request" status and a descriptive message
-        return res.status(400).json({
-            message: "ID parameter is missing or incorrectly formatted",
-        });
+    if (!req?.params?.id || !isValidID(req?.params?.id)) {
+        // 400 Bad Request
+        return res.status(400).send("Invalid user ID");
     }
 
     // check if the user is trying to edit someone else's profile
-    if (req.body.id !== req.body.currentUserID) {
-        // send a "Forbidden" status
-        return res.sendStatus(403);
+    if (req.params.id !== req.body.currentUserID) {
+        // 403 Forbidden
+        return res.status(403).send("Attempted editing another user's profile");
     }
     try {
-        const user = await User.findById(req.body.id).exec();
+        const user = await User.findById(req.params.id).exec();
 
         // check if no user was found
         if (!user) {
-            // send a "No Content" status and a descriptive message
-            return res
-                .status(204)
-                .json({ message: `No user matches ID = ${req.params.id}` });
+            // 404 Not Found
+            return res.status(404).send("User does not exist");
         }
 
-        const oldUsername = user.username;
         // update the user based on the provided data
         if (req.body?.username) user.username = req.body.username;
+
         if (req.body?.email) user.email = req.body.email;
-        if (req.body?.password) user.password = req.body.password;
+
+        if (req.body?.password)
+            user.password = await bcrypt.hash(req.body.password, 10);
 
         await user.save();
 
-        res.json({
-            message: `Successfully changed ${oldUsername}'s${
-                req.body?.username ? ` username to ${user.username}` : ""
-            }${req.body?.email ? ` email to ${user.email}` : ""}${
-                req.body?.password ? ` password to ${user.password}` : ""
-            }
-        `,
-        });
+        // 200 OK
+        return res.sendStatus(200);
     } catch (err: unknown) {
-        // send an "Internal Server Error" status and the error message
-        res.status(500).json(err);
+        // 500 Internal Server Error
+        return res.status(500).json(err);
     }
 };
 
 // ------------------------ DELETE ------------------------ //
-const deleteUser = async (req: Request, res: Response) => {
+const deleteUserById = async (req: Request, res: Response) => {
     // check if the ID is missing or incorrectly formatted
-    if (!req?.body?.id || !mongoose.Types.ObjectId.isValid(req?.body?.id)) {
-        // send a "Bad Request" status and a descriptive message
-        return res.status(400).json({
-            message: "ID parameter is missing or incorrectly formatted",
-        });
+    if (!req?.params?.id || !isValidID(req?.params?.id)) {
+        // 400 Bad Request
+        return res.status(400).send("Invalid user ID");
     }
 
     // check if the user is trying to delete someone else's account
-    if (req.body.id !== req.body.currentUserID) {
-        // send a "Forbidden" status
-        return res.sendStatus(403);
+    if (req.params.id !== req.body.currentUserID) {
+        // 403 Forbidden
+        return res
+            .status(403)
+            .send("Attempted deleting another user's account");
     }
     try {
-        const user = await User.findById(req.body.id).exec();
+        const user = await User.findById(req.params.id).exec();
 
-        // check if no user was found
-        if (!user) {
-            // send a "No Content" status and a descriptive message
-            return res
-                .status(204)
-                .json({ message: `No user matches ID = ${req.params.id}` });
+        // only delete the account if it exists
+        if (user) {
+            await User.deleteOne({ _id: req.params.id });
         }
 
-        const oldUsername = user.username;
-        await User.deleteOne({ _id: req.body.id });
-
-        res.json({
-            message: `Successfully deleted ${oldUsername}'s account`,
-        });
+        // 204 No Content
+        return res.sendStatus(204);
     } catch (err: unknown) {
-        // send an "Internal Server Error" status and the error message
-        res.status(500).json(err);
+        // 500 Internal Server Error
+        return res.status(500).json(err);
     }
 };
 
-export { createUser, readUser, readAllUsers, updateUser, deleteUser };
+export {
+    createNewUser,
+    readUserById,
+    readAllUsers,
+    updateUserById,
+    deleteUserById,
+};

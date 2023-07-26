@@ -10,10 +10,18 @@ const handleLogin = async (req: Request, res: Response) => {
     const cookies = req.cookies;
     const { username, email, password } = req.body;
     if ((!username && !email) || !password) {
-        // send a "Bad Request" status and a descriptive message
-        res.status(400).json({
-            message: "Missing required data",
-        });
+        let missingFields: {
+            username?: string;
+            email?: string;
+            password?: string;
+        } = {};
+        if (!username && !email) {
+            missingFields.username = "missing";
+            missingFields.email = "missing";
+        }
+        if (!password) missingFields.password = "missing";
+        // 400 Bad Request
+        return res.status(400).json(missingFields);
     }
 
     // check the if user with the provided username or email doesn't exist
@@ -21,8 +29,8 @@ const handleLogin = async (req: Request, res: Response) => {
     try {
         const foundUser = await User.findOne(criteria).exec();
         if (!foundUser) {
-            // send a "Unauthorized" status
-            return res.sendStatus(401);
+            // 404 Not Found
+            return res.status(404).send("User does not exist");
         }
 
         // compare the passwords
@@ -73,23 +81,24 @@ const handleLogin = async (req: Request, res: Response) => {
                 maxAge: 24 * 60 * 60 * 1000,
             });
 
-            // send back the access token
-            res.json({ accessToken });
+            // 200 OK
+            return res.status(200).json({ accessToken });
         } else {
-            // send an "Unauthorized" status
-            res.sendStatus(401);
+            // 401 Unauthorized
+            return res.status(401).send("Incorrect password");
         }
     } catch (err: unknown) {
-        res.sendStatus(500).json(err);
+        // 500 Internal Server Error
+        res.status(500).json(err);
     }
 };
 
 const handleLogout = async (req: Request, res: Response) => {
-    // DELETE THE ACCESS TOKEN ON THE FRONTEND TOO
+    // DELETE THE ACCESS TOKEN ON THE FRONTEND AS WELL
     // check if the cookies don't contain a refresh token
     const cookies = req.cookies;
     if (!cookies?.jwt) {
-        // send a "No Content" status
+        // 204 No Content
         return res.sendStatus(204);
     }
 
@@ -102,7 +111,7 @@ const handleLogout = async (req: Request, res: Response) => {
             // BEFORE DEPLOYMENT: add secure:true
             res.clearCookie("jwt", { httpOnly: true, sameSite: "none" });
 
-            // send a "No Content" status
+            // 204 No Content
             return res.sendStatus(204);
         }
 
@@ -110,14 +119,15 @@ const handleLogout = async (req: Request, res: Response) => {
         foundUser.refreshToken = foundUser.refreshToken.filter(
             (token) => token !== refreshToken
         );
-        const result = await foundUser.save();
+        await foundUser.save();
 
         // BEFORE DEPLOYMENT: add secure:true
         res.clearCookie("jwt", { httpOnly: true, sameSite: "none" });
 
-        // send a "No Content" status
+        // 204 No Content
         return res.sendStatus(204);
     } catch (err: unknown) {
+        // 500 Internal Server Error
         res.sendStatus(500).json(err);
     }
 };
@@ -125,10 +135,9 @@ const handleLogout = async (req: Request, res: Response) => {
 const handleRefresh = async (req: Request, res: Response) => {
     // check if the cookies don't contain a refresh token
     const cookies = req.cookies;
-    console.log(req);
     if (!cookies?.jwt) {
-        // send a "Unauthorized" status
-        return res.sendStatus(401);
+        // 401 Unauthorized
+        return res.status(401).send("Missing refresh token");
     }
 
     const refreshToken = cookies.jwt;
@@ -146,8 +155,8 @@ const handleRefresh = async (req: Request, res: Response) => {
                 process.env.REFRESH_TOKEN_SECRET as string,
                 async (err: unknown, decoded: any) => {
                     if (err) {
-                        // send a "Forbidden" status
-                        return res.sendStatus(403);
+                        // 403 Forbidden
+                        return res.status(403).send("Invalid refresh token");
                     }
 
                     const hackedUser = await User.findOne({
@@ -159,8 +168,8 @@ const handleRefresh = async (req: Request, res: Response) => {
                     }
                 }
             );
-            // send a "Forbidden" status
-            return res.sendStatus(403);
+            // 403 Forbidden
+            return res.status(403).send("Invalid refresh token");
         }
 
         const newRefreshTokenArray = foundUser.refreshToken.filter(
@@ -209,11 +218,12 @@ const handleRefresh = async (req: Request, res: Response) => {
                 });
 
                 // send back the access token
-                res.json({ accessToken });
+                res.status(200).json({ accessToken });
             }
         );
     } catch (err: unknown) {
-        res.sendStatus(500).json(err);
+        // 500 Internal Server Error
+        res.status(500).json(err);
     }
 };
 

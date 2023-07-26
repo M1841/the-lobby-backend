@@ -9,10 +9,12 @@ import cookieParser from "cookie-parser";
 import connectDB from "./config/connectDB";
 import corsOptions from "./config/corsOptions";
 import credentials from "./middleware/credentials";
-import authRoute from "./routes/api/auth";
-import postsRoute from "./routes/api/posts";
-import usersRoute from "./routes/api/users";
+
 import rootRoute from "./routes/root";
+import authRoute from "./routes/api/auth";
+import usersRoute from "./routes/api/users";
+import postsRoute from "./routes/api/posts";
+import commentsRoute from "./routes/api/comments";
 
 // -------------------- INITIALIZATION -------------------- //
 dotenv.config();
@@ -38,14 +40,14 @@ app.use(cookieParser());
 // User Authentication
 app.use("/api/auth", authRoute);
 
-// CRUD Post Operations
-app.use("/api/posts", postsRoute);
-
 // CRUD User Operations
 app.use("/api/users", usersRoute);
 
-// Test Hello World Route
-app.get("/hello", (req: Request, res: Response) => res.send("Hello World!"));
+// CRUD Post Operations
+app.use("/api/posts", postsRoute);
+
+// CRUD Comment Operations
+app.use("/api/comments", commentsRoute);
 
 // Root Redirect
 app.use("/*", rootRoute);

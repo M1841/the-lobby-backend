@@ -1,11 +1,3 @@
-interface IPost {
-    content: string;
-    userID: string;
-    date: Date;
-    likeIDs: string[];
-    commentIDs: string[];
-}
-
 interface IUser {
     username: string;
     email: string;
@@ -14,6 +6,39 @@ interface IUser {
 }
 
 interface IPublicUser {
-    id: string;
+    _id: mongoose.Types.ObjectId;
     username: string;
+}
+
+interface IPost {
+    content: string;
+    userID: mongoose.Types.ObjectId;
+    date: Date;
+    likeIDs: mongoose.Types.ObjectId[];
+    commentIDs: mongoose.Types.ObjectId[];
+}
+
+interface IPublicPost {
+    _id: mongoose.Types.ObjectId;
+    userID: mongoose.Types.ObjectId;
+    date: Date;
+    likeIDs: mongoose.Types.ObjectId[];
+    commentIDs: mongoose.Types.ObjectId[];
+}
+
+interface IComment {
+    content: string;
+    userID: mongoose.Types.ObjectId;
+    postID: mongoose.Types.ObjectId;
+    date: Date;
+    likeIDs: mongoose.Types.ObjectId[];
+}
+
+interface IPublicComment {
+    _id: mongoose.Types.ObjectId;
+    content: string;
+    userID: mongoose.Types.ObjectId;
+    postID: mongoose.Types.ObjectId;
+    date: Date;
+    likeIDs: mongoose.Types.ObjectId[];
 }

@@ -5,18 +5,19 @@ import mongoose from "mongoose";
 // Internal Modules
 import Post from "../model/Post";
 
+const isValidID = mongoose.Types.ObjectId.isValid;
+
 // ------------------------ CREATE ------------------------ //
 const createPost = async (req: Request, res: Response) => {
     // check for required attributes
-    if (!req?.body?.content || !req?.body?.currentUserID) {
-        // send a "Bad Request" status and a descriptive message
-        return res.status(400).json({
-            message: "Missing required title, content or user ID attributes",
-        });
+    if (!req?.body?.content) {
+        // 400 Bad Request
+        return res.status(400).send("Missing post content");
     }
 
     try {
-        const post = await Post.create({
+        // create and store the new post
+        await Post.create({
             content: req.body.content,
             userID: req.body.currentUserID,
             date: new Date(),
@@ -24,145 +25,187 @@ const createPost = async (req: Request, res: Response) => {
             commentIDs: [] as string[],
         });
 
-        res.status(201).json(post);
+        // 201 Created
+        return res.sendStatus(201);
     } catch (err: unknown) {
+        // 500 Internal Server Error
         res.sendStatus(500).json(err);
     }
 };
 
 // ------------------------- READ ------------------------- //
-const readPost = async (req: Request, res: Response) => {
+const readAllPosts = async (req: Request, res: Response) => {
+    try {
+        const posts = await Post.find();
+        // check if no posts were found
+        if (!posts || posts.length < 1) {
+            // 204 No Content
+            return res.sendStatus(204);
+        }
+
+        return res.json(posts);
+    } catch (err: unknown) {
+        // 500 Internal Server Error
+        return res.status(500).json(err);
+    }
+};
+
+const readPostById = async (req: Request, res: Response) => {
     // check if the ID is missing or incorrectly formatted
-    if (!req?.body?.id || !mongoose.Types.ObjectId.isValid(req?.body?.id)) {
-        // send a "Bad Request" status and a descriptive message
-        return res.status(400).json({
-            message: "ID parameter is missing or incorrectly formatted",
-        });
+    if (!req?.params?.id || !isValidID(req?.params?.id)) {
+        // 400 Bad Request
+        return res.status(400).send("Invalid post ID");
     }
     try {
         const post = await Post.findById(req.params.id).exec();
 
         // check if no post was found
         if (!post) {
-            // send a "No Content" status and a descriptive message
-            return res
-                .status(204)
-                .json({ message: `No post matches ID = ${req.params.id}` });
+            // 404 Not Found
+            return res.status(404).send("Post does not exist");
         }
 
-        res.json(post);
+        return res.json(post);
     } catch (err: unknown) {
-        res.sendStatus(500).json(err);
-    }
-};
-
-const readAllPosts = async (req: Request, res: Response) => {
-    try {
-        const posts = await Post.find();
-        // check if no posts were found
-        if (!posts || posts.length < 1) {
-            // send a "No Content" status and a descriptive message
-            return res.status(204).json({ message: "No posts were found" });
-        }
-
-        res.json(posts);
-    } catch (err: unknown) {
-        res.sendStatus(500).json(err);
+        // 500 Internal Server Error
+        return res.status(500).json(err);
     }
 };
 
 const readAllPostsByUser = async (req: Request, res: Response) => {
     // check if the ID is missing or incorrectly formatted
-    if (!req?.body?.id || !mongoose.Types.ObjectId.isValid(req?.body?.id)) {
-        // send a "Bad Request" status and a descriptive message
-        return res.status(400).json({
-            message: "ID parameter is missing or incorrectly formatted",
-        });
+    if (!req?.params?.id || !isValidID(req?.params?.id)) {
+        // 400 Bad Request
+        return res.status(400).send("Invalid user ID");
     }
     try {
         const posts = await Post.find({ userID: req.params.id });
 
         // check if no posts were found
         if (!posts) {
-            // send a "No Content" status and a descriptive message
-            return res
-                .status(204)
-                .json({ message: `No posts match userID = ${req.params.id}` });
+            // 204 No Content
+            return res.sendStatus(204);
         }
-        res.json(posts);
+        return res.json(posts);
     } catch (err: unknown) {
+        // 500 Internal Server Error
         res.sendStatus(500).json(err);
     }
 };
 
 // ------------------------ UPDATE ------------------------ //
-const updatePost = async (req: Request, res: Response) => {
+const updatePostById = async (req: Request, res: Response) => {
     // check if the ID is missing or incorrectly formatted
-    if (!req?.body?.id || !mongoose.Types.ObjectId.isValid(req?.body?.id)) {
-        // send a "Bad Request" status and a descriptive message
-        return res.status(400).json({
-            message: "ID parameter is missing or incorrectly formatted",
-        });
+    if (!req?.params?.id || !isValidID(req?.params?.id)) {
+        // 400 Bad Request
+        return res.status(400).send("Invalid post ID");
     }
 
-    const post = await Post.findById(req.body.id).exec();
+    try {
+        const post = await Post.findById(req.params.id).exec();
 
-    // check if no post was found
-    if (!post) {
-        return res
-            .status(204)
-            .json({ message: `No post matches ID = ${req.body.id}` });
+        // check if no post was found
+        if (!post) {
+            // 404 Not Found
+            return res.status(404).send("Post does not exist");
+        }
+
+        // check if the post belongs to the user
+        if (post.userID.toString() !== req.body.currentUserID) {
+            // 403 Forbidden
+            return res
+                .status(403)
+                .send("Attempted editing another user's post");
+        }
+
+        // update the post based on the provided data
+        if (req.body?.content) post.content = req.body.content;
+
+        await post.save();
+
+        // 200 OK
+        return res.sendStatus(200);
+    } catch (err: unknown) {
+        // 500 Internal Server Error
+        res.sendStatus(500).json(err);
+    }
+};
+
+const likePostById = async (req: Request, res: Response) => {
+    // check if the ID is missing or incorrectly formatted
+    if (!req?.params?.id || !isValidID(req?.params?.id)) {
+        // 400 Bad Request
+        return res.status(400).send("Invalid post ID");
     }
 
-    // check if the post belongs to the user
-    if (post.userID !== req.body.currentUserID) {
-        // send a "Forbidden" status
-        return res.sendStatus(403);
+    try {
+        const post = await Post.findById(req.params.id).exec();
+
+        // check if no post was found
+        if (!post) {
+            // 404 Not Found
+            return res.status(404).send("Post does not exist");
+        }
+
+        if (post.likeIDs.indexOf(req.body.currentUserID) === -1) {
+            // add the user ID to the like IDs array if it's not already there
+            post.likeIDs.push(req.body.currentUserID);
+        } else {
+            // remove the user ID from the like IDs array if it's already there
+            const newLikeIDs = post.likeIDs.filter(
+                (userID) => userID.toString() !== req.body.currentUserID
+            );
+            post.likeIDs = newLikeIDs;
+        }
+
+        await post.save();
+
+        // 200 OK
+        return res.sendStatus(200);
+    } catch (err: unknown) {
+        // 500 Internal Server Error
+        res.sendStatus(500).json(err);
     }
-
-    // update the post based on the provided data
-    if (req.body?.content) post.content = req.body.content;
-
-    const result = await post.save();
-
-    res.json(result);
 };
 
 // ------------------------ DELETE ------------------------ //
-const deletePost = async (req: Request, res: Response) => {
+const deletePostById = async (req: Request, res: Response) => {
     // check if the ID is missing or incorrectly formatted
-    if (!req?.body?.id || !mongoose.Types.ObjectId.isValid(req?.body?.id)) {
-        // send a "Bad Request" status and a descriptive message
-        return res.status(400).json({
-            message: "ID parameter is missing or incorrectly formatted",
-        });
+    if (!req?.params?.id || !isValidID(req?.params?.id)) {
+        // 400 Bad Request
+        return res.status(400).send("Invalid post ID");
     }
 
-    const post = await Post.findById(req.body.id).exec();
+    try {
+        const post = await Post.findById(req.params.id).exec();
 
-    // check if no post was found
-    if (!post) {
-        return res
-            .status(204)
-            .json({ message: `No post matches ID = ${req.body.id}` });
+        // only delete the post if it exists
+        if (post) {
+            // check if the post belongs to the user
+            if (post.userID.toString() !== req.body.currentUserID) {
+                // 403 Forbidden
+                return res
+                    .status(403)
+                    .send("Attempted deleting another user's post");
+            }
+
+            await Post.deleteOne({ _id: req.params.id });
+        }
+
+        // 204 No Content
+        return res.sendStatus(204);
+    } catch (err: unknown) {
+        // 500 Internal Server Error
+        res.sendStatus(500).json(err);
     }
-
-    // check if the post belongs to the user
-    if (post.userID !== req.body.currentUserID) {
-        // send a "Forbidden" status
-        return res.sendStatus(403);
-    }
-
-    await Post.deleteOne({ _id: req.body.id });
-
-    res.json({ message: `Successfully deleted post ${req.body.id}` });
 };
 
 export {
     createPost,
-    readPost,
+    readPostById,
     readAllPosts,
     readAllPostsByUser,
-    updatePost,
-    deletePost,
+    updatePostById,
+    likePostById,
+    deletePostById,
 };

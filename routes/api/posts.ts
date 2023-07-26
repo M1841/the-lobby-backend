@@ -6,20 +6,21 @@ const router = express.Router();
 import verifyJWT from "../../middleware/verifyJWT";
 import {
     createPost,
-    readPost,
+    readPostById,
     readAllPosts,
     readAllPostsByUser,
-    updatePost,
-    deletePost,
+    updatePostById,
+    likePostById,
+    deletePostById,
 } from "../../controller/postsController";
 
+router.route("/").post(verifyJWT, createPost).get(readAllPosts);
 router
-    .route("/")
-    .post(verifyJWT, createPost)
-    .get(readAllPosts)
-    .put(verifyJWT, updatePost)
-    .delete(verifyJWT, deletePost);
-router.get("/:id", readPost);
-router.get("/user/:id", readAllPostsByUser);
+    .route("/:id")
+    .get(readPostById)
+    .put(verifyJWT, updatePostById)
+    .delete(verifyJWT, deletePostById);
+router.route("/like/:id").put(verifyJWT, likePostById);
+router.route("/user/:id").get(readAllPostsByUser);
 
 export default router;

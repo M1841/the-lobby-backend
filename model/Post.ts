@@ -1,5 +1,5 @@
 // Third-Party Modules
-import { Schema, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 
 const postSchema = new Schema<IPost>({
     content: {
@@ -7,7 +7,7 @@ const postSchema = new Schema<IPost>({
         required: true,
     },
     userID: {
-        type: String,
+        type: mongoose.Types.ObjectId,
         required: true,
     },
     date: {
@@ -15,11 +15,11 @@ const postSchema = new Schema<IPost>({
         required: true,
     },
     likeIDs: {
-        type: [String],
+        type: [mongoose.Types.ObjectId],
         default: [],
     },
     commentIDs: {
-        type: [String],
+        type: [mongoose.Types.ObjectId],
         default: [],
     },
 });

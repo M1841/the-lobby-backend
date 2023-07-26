@@ -5,19 +5,18 @@ const router = express.Router();
 // Internal Modules
 import verifyJWT from "../../middleware/verifyJWT";
 import {
-    createUser,
-    readUser,
+    createNewUser,
+    readUserById,
     readAllUsers,
-    updateUser,
-    deleteUser,
+    updateUserById,
+    deleteUserById,
 } from "../../controller/usersController";
 
+router.route("/").post(createNewUser).get(readAllUsers);
 router
-    .route("/")
-    .post(createUser)
-    .get(readAllUsers)
-    .put(verifyJWT, updateUser)
-    .delete(verifyJWT, deleteUser);
-router.route("/:id").get(readUser);
+    .route("/:id")
+    .get(readUserById)
+    .put(verifyJWT, updateUserById)
+    .delete(verifyJWT, deleteUserById);
 
 export default router;
