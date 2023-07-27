@@ -9,6 +9,7 @@ import {
     readUserById,
     readAllUsers,
     updateUserById,
+    followUserById,
     deleteUserById,
 } from "../../controller/usersController";
 
@@ -18,5 +19,7 @@ router
     .get(readUserById)
     .put(verifyJWT, updateUserById)
     .delete(verifyJWT, deleteUserById);
+
+router.route("/follow/:id").put(verifyJWT, followUserById);
 
 export default router;

@@ -70,8 +70,12 @@ const readAllUsers = async (req: Request, res: Response) => {
 
         // send back public user information
         const publicUsers: IPublicUser[] = users.map((user) => {
-            const { _id, username } = user;
-            return { _id, username };
+            return {
+                _id: user._id,
+                username: user.username,
+                followerIDs: user.followerIDs,
+                followingIDs: user.followingIDs,
+            };
         });
 
         // 200 OK
@@ -98,7 +102,12 @@ const readUserById = async (req: Request, res: Response) => {
             return res.status(404).send("User does not exist");
         }
 
-        return res.json({ _id: user._id, username: user.username });
+        return res.json({
+            _id: user._id,
+            username: user.username,
+            followerIDs: user.followerIDs,
+            followingIDs: user.followingIDs,
+        });
     } catch (err: unknown) {
         // 500 Internal Server Error
         return res.status(500).json(err);
@@ -145,6 +154,58 @@ const updateUserById = async (req: Request, res: Response) => {
     }
 };
 
+const followUserById = async (req: Request, res: Response) => {
+    // check if the ID is missing or incorrectly formatted
+    if (!req?.params?.id || !isValidID(req?.params?.id)) {
+        // 400 Bad Request
+        return res.status(400).send("Invalid user ID");
+    }
+    if (req.params.id === req.body.currentUserID) {
+        // 409 Conflict
+        return res.status(409).send("Attempted following self");
+    }
+    try {
+        const currentUser = await User.findById(req.body.currentUserID).exec();
+        const targetUser = await User.findById(req.params.id).exec();
+
+        // check if no user was found
+        if (!targetUser || !currentUser) {
+            // 404 Not Found
+            return res.status(404).send("User does not exist");
+        }
+
+        if (
+            targetUser.followerIDs.indexOf(currentUser._id) === -1 &&
+            currentUser.followingIDs.indexOf(targetUser._id) === -1
+        ) {
+            // add the current user's ID to the target user's follower IDs array if it's not already there
+            targetUser.followerIDs.push(currentUser._id);
+
+            // add the target user's ID to the current user's following IDs array if it's not already there
+            currentUser.followingIDs.push(targetUser._id);
+        } else {
+            // remove the current user's ID from the target user's follower IDs array if it's already there
+            const newFollowerIDs = targetUser.followerIDs.filter(
+                (userID) => userID.toString() !== currentUser._id.toString()
+            );
+            targetUser.followerIDs = newFollowerIDs;
+            // remove the target user's ID from the current user's following IDs array if it's already there
+            const newFollowingIDs = currentUser.followingIDs.filter(
+                (userID) => userID.toString() !== targetUser._id.toString()
+            );
+            currentUser.followingIDs = newFollowingIDs;
+        }
+        await targetUser.save();
+        await currentUser.save();
+
+        // 200 OK
+        return res.sendStatus(200);
+    } catch (err: unknown) {
+        // 500 Internal Server Error
+        return res.status(500).json(err);
+    }
+};
+
 // ------------------------ DELETE ------------------------ //
 const deleteUserById = async (req: Request, res: Response) => {
     // check if the ID is missing or incorrectly formatted
@@ -181,5 +242,6 @@ export {
     readUserById,
     readAllUsers,
     updateUserById,
+    followUserById,
     deleteUserById,
 };

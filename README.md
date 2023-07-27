@@ -1,8 +1,8 @@
-# The Lobby Backend - version 1.2.0
+# The Lobby Backend - version 1.2.1
 
 ## Description
 
-The Lobby is a long running project of mine, constantly being reinvented using new technologies and ideas. Initially the app was loosely inspired by Reddit, and slowly became a place where users could post content, and interact with other users' content (if I had made it publicly available). This iteration contains a reimagination of the Lobby's backend using Typescript, Node.js. It is still in the early stages, and so far it contains full user authentication using JWT, CRUD operations for users, text posts and top level comments, likes for both posts and comments and customizable CORS handling. The next steps are to implement media content support, nested comment replies, followers, search and more. This project is fully open source and anyone is allowed to clone it and use it it in their own projects. I will be updating the extensive README as I add more features and functionality.
+The Lobby is a long running project of mine, constantly being reinvented using new technologies and ideas. Initially the app was loosely inspired by Reddit, and slowly became a place where users could post content, and interact with other users' content (if I had made it publicly available). This iteration contains a reimagination of the Lobby's backend using Typescript and Node.js. It is still in the early stages, and so far it contains full user authentication using JWT, CRUD operations for users, text posts and top level comments, likes for both posts and comments and customizable CORS handling. The next steps are to implement media content support, nested comment replies, search and more. This project is fully open source and anyone is allowed to clone it and use it it in their own projects. I will be updating the extensive README as I add more features and functionality.
 
 ## Table of Contents
 
@@ -22,6 +22,7 @@ The Lobby is a long running project of mine, constantly being reinvented using n
         -   [GET /api/users](#read-all-users)
         -   [GET /api/users/:id](#read-user-by-id)
         -   [PUT /api/users/:id](#update-user-by-id)
+        -   [PUT /api/users/follow/:id](#follow-user-by-id)
         -   [DELETE /api/users/:id](#delete-user-by-id)
     -   [Posts](#posts)
         -   [POST /api/posts](#create-post)
@@ -42,6 +43,7 @@ The Lobby is a long running project of mine, constantly being reinvented using n
         -   [DELETE /api/comments/:id](#delete-comment-by-id)
 
 -   [Changelog](#changelog)
+    -   [v1.2.1](#v121)
     -   [v1.2.0](#v120)
     -   [v1.1.1](#v111)
     -   [v1.1.0](#v110)
@@ -79,7 +81,7 @@ ACCESS_TOKEN_SECRET=[any random string]
 REFRESH_TOKEN_SECRET=[any random string]
 ```
 
-4. Add the URL of your frontend and backend to `config/allowedOrigins.ts` (it contains the URLs I used)
+4. Add the URL of your frontend and backend to `config/allowedOrigins.ts` (at first it contains the URLs I used)
 
 ```
 const allowedOrigins: string[] = [
@@ -119,8 +121,8 @@ npm run dev
 
 `POST /api/auth/login`
 
--   Description: Authenticates a user by username or email (you only need to send one; if both are received, only the username is considered), stores a refresh token in a cookie, and returns an access token. All the cookie handling is built in, so you don't have to worry about it. What you need to do is store the access token somewhere on the frontend, as you will need it to access protected routes.
--   Request Body: Contains a username or email and a password
+-   Description: Authenticates a user by username or email (you only need to send one; if both are received, only the username is considered) and password, stores a refresh token in a cookie, and returns an access token. All the cookie handling is built in, so you don't have to worry about it. What you need to do is store the access token somewhere on the frontend, as you will need it to access protected routes.
+-   Request Body: Contains a username (or email) and a password
 
     Example:
 
@@ -217,7 +219,7 @@ npm run dev
 
 `POST /api/users`
 
--   Description: Registers a new user into the database. This does not also log the user in. If you want the user to be logged in after the registration sure to also call `/api/auth/login` right after.
+-   Description: Registers a new user into the database. This does not also log the user in. If you want the user to be autmatically logged in after the registration, call `POST /api/auth/login` right after.
 -   Request Body: Contains a username, email and password
 
     Example:
@@ -269,11 +271,15 @@ npm run dev
         [
             {
                 "_id": "64bd1dee78c6046dbec6b98c",
-                "username": "LilySmith82"
+                "username": "LilySmith82",
+                "followerIDs": ["64bfdfd6e0877113aefe93dc"],
+                "followingIDs": []
             },
             {
                 "_id": "64bfdfd6e0877113aefe93dc",
                 "username": "WillH19"
+                "followerIDs": [],
+                "followingIDs": ["64bd1dee78c6046dbec6b98c"]
             },
             // ...
         ]
@@ -285,7 +291,7 @@ npm run dev
 
 `GET /api/users/:id`
 
--   Description: Returns the public information of the one user with the specified ID. There may also be an endpoint for private information soon. The ID must be added to the end of the URL, like such: `/api/users/64bd1dee78c6046dbec6b98c`
+-   Description: Returns the public information of a user with the specified ID. There may also be an endpoint for private information in the future. The ID must be added to the end of the URL, like such: `/api/users/64bd1dee78c6046dbec6b98c`
 -   Possible Responses:
 
     -   200 OK: User was fetched successfully
@@ -295,7 +301,9 @@ npm run dev
         ```
         {
             "_id": "64bd1dee78c6046dbec6b98c",
-            "username": "LilySmith82"
+            "username": "LilySmith82",
+            "followerIDs": ["64bfdfd6e0877113aefe93dc"],
+            "followingIDs": []
         }
         ```
 
@@ -307,7 +315,7 @@ npm run dev
         Invalid user ID
         ```
 
-    -   404 Not Found: The user with the specified ID doesn't exist
+    -   404 Not Found: No user was found with the specified ID
 
         Example:
 
@@ -362,6 +370,55 @@ npm run dev
 
     -   404 Not Found: No user was found with the specified ID
 
+        Example:
+
+        ```
+        User does not exist
+        ```
+
+#### Follow user by ID
+
+`PUT /api/users/follow/:id`
+
+`Authorization: Bearer [access token]`
+
+-   **PROTECTED ROUTE**: Requires an access token in the authorization header.
+-   Description: Follows or unfollows a user with the specified ID. The ID must be added to the end of the URL, like such: `/api/users/follow/64bfdfd6e0877113aefe93dc`
+-   Possible Responses:
+
+    -   200 OK: User was followed or unfollowed successfully
+    -   400 Bad Request: No user ID was provided or it's incompatible with the MongoDB `ObjectId` type (12 alphanumeric characters)
+
+        Example:
+
+        ```
+        Invalid user ID
+        ```
+
+    -   401 Unauthorized: No access token was provided
+
+        Example:
+
+        ```
+        Missing access token
+        ```
+
+    -   404 Not Found: No user was found with the specified ID
+
+        Example:
+
+        ```
+        User does not exist
+        ```
+
+    -   409 Conflict: The user is trying to follow themselves
+
+        Example:
+
+        ```
+        Attempted following self
+        ```
+
 #### Delete user by ID
 
 `DELETE /api/users/:id`
@@ -369,7 +426,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Deletes the user from the database. Handling for cases when the user is trying to delete someone else's account (which is currently not allowed) is built in as well. One thing to keep in mind, when deleting a user's account, their posts and comments still exist. The ID must be added to the end of the URL, like such: `/api/users/64bfdfd6e0877113aefe93dc`
+-   Description: Deletes the user from the database. Handling for cases when the user is trying to delete someone else's account (which is currently not allowed) is built in as well. Deleting a user doesn't delete their posts, comments, or remove the user from other users' follower or following lists. The ID must be added to the end of the URL, like such: `/api/users/64bfdfd6e0877113aefe93dc`
 
 -   Possible responses:
 
@@ -421,7 +478,7 @@ npm run dev
 -   Possible Responses:
 
     -   201 Created: Post was created successfully
-    -   400 Bad Request: No postcontent was provided
+    -   400 Bad Request: No post content was provided
 
         Example:
 
@@ -480,7 +537,7 @@ npm run dev
 
 `GET /api/posts/:id`
 
--   Description: Returns the one post with the specified ID. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
+-   Description: Returns a post with the specified ID. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
 -   Possible Responses:
 
     -   200 OK: Post was fetched successfully
@@ -507,7 +564,7 @@ npm run dev
         Invalid post ID
         ```
 
-    -   404 Not Found: The post with the specified ID doesn't exist
+    -   404 Not Found: No post was found with the specified ID
 
         Example:
 
@@ -519,7 +576,7 @@ npm run dev
 
 `GET /api/posts/user/:id`
 
--   Description: Returns all the posts by the user with the specified ID. The user ID must be added to the end of the URL, like such: `/api/posts/user/64bfdfd6e0877113aefe93dc`
+-   Description: Returns all the posts by a user with the specified ID. The user ID must be added to the end of the URL, like such: `/api/posts/user/64bfdfd6e0877113aefe93dc`
 
 -   Possible Responses:
 
@@ -556,7 +613,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Updates a post's content. You can only update your own posts. The example shows a content change. In the future, when media (picture, video, audio etc) is added, you will be able to update that as well. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
+-   Description: Updates the content of a post with the specified ID. You can only update your own posts. The example shows a content change. In the future, when media (picture, video, audio etc) is added, you will be able to update that as well. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
 -   Request Body: Since you can only update the content, you only need to send the new content.
 
     Example:
@@ -570,20 +627,6 @@ npm run dev
 -   Possible Responses:
 
     -   200 OK: Post was updated successfully
-
-        Example:
-
-        ```
-        {
-            "_id": "614af8a3a25a2b001f439c06",
-            "content": "Looking forward to my first day at my new job tomorrow! 🚀",
-            "userID": "64bd1dee78c6046dbec6b98c",
-            "date": "2023-07-22T18:45:00Z",
-            "likeIDs": ["64bfdfd6e0877113aefe93dc", "614af8a3a25a2b001f439c08", "614af8a3a25a2b001f439c09"],
-            "commentIDs": ["614af8a3a25a2b001f439c08"],
-            "__v": 1
-        }
-        ```
 
     -   400 Bad Request: No post ID was provided or it's incompatible with the MongoDB `ObjectId` type (12 alphanumeric characters)
 
@@ -601,7 +644,7 @@ npm run dev
         Missing access token
         ```
 
-    -   404 Not Found: The post with the specified ID doesn't exist
+    -   404 Not Found: No post was found with the specified ID
 
         Example:
 
@@ -616,7 +659,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Adds the user's ID to the post's likeIDs array, or removes it if it's already there. The ID must be added to the end of the URL, like such: `/api/like/614af8a3a25a2b001f439c06`
+-   Description: Likes or unlikes a post with the specified ID. The ID must be added to the end of the URL, like such: `/api/like/614af8a3a25a2b001f439c06`
 -   Possible Responses:
 
     -   200 OK: Post was liked or unliked successfully
@@ -637,7 +680,7 @@ npm run dev
         Missing access token
         ```
 
-    -   404 Not Found: The post with the specified ID doesn't exist
+    -   404 Not Found: No post was found with the specified ID
 
         Example:
 
@@ -652,7 +695,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Deletes the post from the database. You can only delete your own posts. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
+-   Description: Deletes a post with the specified ID from the database. Deleting a post does not delete the comments under it. You can only delete your own posts. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
 
 -   Possible Responses:
 
@@ -683,7 +726,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Creates a new comment and stores it in the database.
+-   Description: Creates a new comment and stores it in the database, under a post with the specified ID. The ID must be added to the request body.
 -   Request Body: Contains the content of the comment and the ID of the post it belongs to.
 
     Example:
@@ -716,7 +759,7 @@ npm run dev
         Missing access token
         ```
 
-    -   404 Not Found: The post with the specified ID doesn't exist
+    -   404 Not Found: No post was found with the specified ID
 
         Example:
 
@@ -764,7 +807,7 @@ npm run dev
 
 `GET /api/comments/:id`
 
--   Description: Returns the one comment with the specified ID. The ID must be added to the end of the URL, like such: `/api/comments/614af8a3a25a2b001f439c08`
+-   Description: Returns a comment with the specified ID. The ID must be added to the end of the URL, like such: `/api/comments/614af8a3a25a2b001f439c08`
 -   Possible Responses:
 
     -   200 OK: Comment was fetched successfully
@@ -791,7 +834,7 @@ npm run dev
         Invalid comment ID
         ```
 
-    -   404 Not Found: The comment with the specified ID doesn't exist
+    -   404 Not Found: No comment was found with the specified ID
 
         Example:
 
@@ -803,7 +846,7 @@ npm run dev
 
 `GET /api/comments/user/:id`
 
--   Description: Returns all the comments by the user with the specified ID. The user ID must be added to the end of the URL, like such: `/api/comments/user/64bfdfd6e0877113aefe93dc`
+-   Description: Returns all the comments by a user with the specified ID. The user ID must be added to the end of the URL, like such: `/api/comments/user/64bfdfd6e0877113aefe93dc`
 -   Possible Responses:
 
     -   200 OK: Comments were fetched successfully
@@ -838,7 +881,7 @@ npm run dev
 
 `GET /api/comments/post/:id`
 
--   Description: Returns all the comments under the post with the specified ID. The post ID must be added to the end of the URL, like such: `/api/comments/post/614af8a3a25a2b001f439c06`
+-   Description: Returns all the comments under a post with the specified ID. The post ID must be added to the end of the URL, like such: `/api/comments/post/614af8a3a25a2b001f439c06`
 -   Possible Responses:
 
     -   200 OK: Comments were fetched successfully
@@ -901,20 +944,6 @@ npm run dev
 
     -   200 OK: Comment was updated successfully
 
-        Example:
-
-        ```
-        {
-            "_id": "614af8a3a25a2b001f439c08",
-            "content": "So happy for you! 🎉",
-            "userID": "64bfdfd6e0877113aefe93dc",
-            "postID": "614af8a3a25a2b001f439c06",
-            "date": "2023-07-22T18:45:00Z",
-            "likeIDs": ["64bd1dee78c6046dbec6b98c", "614af8a3a25a2b001f439c09"],
-            "__v": 1
-        }
-        ```
-
     -   400 Bad Request: No comment ID was provided or it's incompatible with the MongoDB `ObjectId` type (12 alphanumeric characters)
 
         Example:
@@ -931,7 +960,7 @@ npm run dev
         Missing access token
         ```
 
-    -   404 Not Found: The comment with the specified ID doesn't exist
+    -   404 Not Found: No comment was found with the specified ID
 
         Example:
 
@@ -967,7 +996,7 @@ npm run dev
         Missing access token
         ```
 
-    -   404 Not Found: The comment with the specified ID doesn't exist
+    -   404 Not Found: No comment was found with the specified ID
 
         Example:
 
@@ -982,7 +1011,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Deletes the comment from the database. You can only delete your own comments. The ID must be added to the end of the URL, like such: `/api/comments/614af8a3a25a2b001f439c08`
+-   Description: Deletes a comment with the specified ID from the database. You can only delete your own comments. The ID must be added to the end of the URL, like such: `/api/comments/614af8a3a25a2b001f439c08`
 -   Possible Responses:
 
     -   204 No Content: Comment was deleted successfully or it didn't exist in the first place
@@ -1011,6 +1040,16 @@ npm run dev
         ```
 
 ## Changelog
+
+### v1.2.1
+
+Release data: 2023-07-27
+
+-   Implemented user follow/unfollow functionality
+-   Updated the user interface to allow the follow/unfollow functionality
+-   Removed unused interfaces
+-   Removed redundant assignments in the `createPost` function
+-   Updated README
 
 ### v1.2.0
 

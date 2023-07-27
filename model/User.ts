@@ -1,5 +1,5 @@
 // Third-Party Modules
-import { Schema, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 
 const userSchema = new Schema<IUser>({
     username: {
@@ -16,6 +16,14 @@ const userSchema = new Schema<IUser>({
     },
     refreshToken: {
         type: [String],
+        default: [],
+    },
+    followerIDs: {
+        type: [mongoose.Types.ObjectId],
+        default: [],
+    },
+    followingIDs: {
+        type: [mongoose.Types.ObjectId],
         default: [],
     },
 });

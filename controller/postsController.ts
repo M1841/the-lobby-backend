@@ -21,8 +21,6 @@ const createPost = async (req: Request, res: Response) => {
             content: req.body.content,
             userID: req.body.currentUserID,
             date: new Date(),
-            likeIDs: [] as string[],
-            commentIDs: [] as string[],
         });
 
         // 201 Created
