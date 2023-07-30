@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import mongoose from "mongoose";
 
 // Internal Modules
-import Post from "../model/Post";
+import Post from "../models/Post";
 
 const isValidID = mongoose.Types.ObjectId.isValid;
 

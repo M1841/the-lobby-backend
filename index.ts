@@ -8,13 +8,14 @@ import cookieParser from "cookie-parser";
 // Internal Modules
 import connectDB from "./config/connectDB";
 import corsOptions from "./config/corsOptions";
-import credentials from "./middleware/credentials";
+import setCorsHeaders from "./middleware/setCorsHeaders";
 
 import rootRoute from "./routes/root";
 import authRoute from "./routes/api/auth";
 import usersRoute from "./routes/api/users";
 import postsRoute from "./routes/api/posts";
 import commentsRoute from "./routes/api/comments";
+import searchRoute from "./routes/api/search";
 
 // -------------------- INITIALIZATION -------------------- //
 dotenv.config();
@@ -25,7 +26,7 @@ connectDB();
 // ---------------------- MIDDLEWARE ---------------------- //
 // Handle Cross-Origin Resource Sharing
 app.use(cors(corsOptions));
-app.use(credentials);
+app.use(setCorsHeaders);
 
 // Handle Unencoded Form Data
 app.use(express.urlencoded({ extended: false }));
@@ -48,6 +49,9 @@ app.use("/api/posts", postsRoute);
 
 // CRUD Comment Operations
 app.use("/api/comments", commentsRoute);
+
+// Search
+app.use("/api/search", searchRoute);
 
 // Root Redirect
 app.use("/*", rootRoute);

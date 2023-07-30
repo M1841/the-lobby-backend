@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
 // Internal Modules
-import User from "../model/User";
+import User from "../models/User";
 
 const handleLogin = async (req: Request, res: Response) => {
     const cookies = req.cookies;

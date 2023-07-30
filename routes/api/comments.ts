@@ -13,7 +13,7 @@ import {
     updateCommentById,
     likeCommentById,
     deleteCommentById,
-} from "../../controller/commentsController";
+} from "../../controllers/comments";
 
 router.route("/").post(verifyJWT, createNewComment).get(readAllComments);
 router

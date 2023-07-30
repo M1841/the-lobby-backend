@@ -3,6 +3,9 @@ interface IUser {
     email: string;
     password: string;
     refreshToken: string[];
+    displayName: string;
+    bio: string;
+    location: string;
     followerIDs: mongoose.Types.ObjectId[];
     followingIDs: mongoose.Types.ObjectId[];
 }
@@ -10,6 +13,9 @@ interface IUser {
 interface IPublicUser {
     _id: mongoose.Types.ObjectId;
     username: string;
+    displayName: string;
+    bio: string;
+    location: string;
     followerIDs: mongoose.Types.ObjectId[];
     followingIDs: mongoose.Types.ObjectId[];
 }
@@ -28,4 +34,10 @@ interface IComment {
     postID: mongoose.Types.ObjectId;
     date: Date;
     likeIDs: mongoose.Types.ObjectId[];
+}
+
+interface ISearchResult {
+    users?: IPublicUser[];
+    posts?: IPost[];
+    comments?: IComment[];
 }

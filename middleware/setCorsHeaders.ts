@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from "express";
 import allowedOrigins from "../config/allowedOrigins";
 
 // set up response headers to satisfy CORS requirements
-const credentials = (req: Request, res: Response, next: NextFunction) => {
+const setCorsHeaders = (req: Request, res: Response, next: NextFunction) => {
     if (allowedOrigins.includes(req.headers.origin as string)) {
         res.setHeader("Access-Control-Allow-Credentials", "true");
         res.setHeader(
@@ -16,4 +16,4 @@ const credentials = (req: Request, res: Response, next: NextFunction) => {
     next();
 };
 
-export default credentials;
+export default setCorsHeaders;

@@ -1,6 +1,8 @@
-// Internal Modules
-import allowedOrigins from "./allowedOrigins";
+// Third-Party Modules
 import { CorsOptions } from "cors";
+
+// Internal Modules
+import allowedOrigins from "../config/allowedOrigins";
 
 const corsOptions: CorsOptions = {
     origin: (origin, callback) => {

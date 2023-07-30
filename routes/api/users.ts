@@ -11,7 +11,7 @@ import {
     updateUserById,
     followUserById,
     deleteUserById,
-} from "../../controller/usersController";
+} from "../../controllers/users";
 
 router.route("/").post(createNewUser).get(readAllUsers);
 router

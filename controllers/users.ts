@@ -4,7 +4,7 @@ import bcrypt from "bcrypt";
 import mongoose from "mongoose";
 
 // Internal Modules
-import User from "../model/User";
+import User from "../models/User";
 
 const isValidID = mongoose.Types.ObjectId.isValid;
 
@@ -15,9 +15,9 @@ const createNewUser = async (req: Request, res: Response) => {
     // check for the required attributes
     if (!username || !email || !password) {
         let missingFields: {
-            username?: string;
-            email?: string;
-            password?: string;
+            username?: "missing";
+            email?: "missing";
+            password?: "missing";
         } = {};
         if (!username) missingFields.username = "missing";
         if (!email) missingFields.email = "missing";
@@ -32,8 +32,8 @@ const createNewUser = async (req: Request, res: Response) => {
         const isEmailTaken = await User.findOne({ email }).exec();
         if (isUsernameTaken || isEmailTaken) {
             let takenFields: {
-                username?: string;
-                email?: string;
+                username?: "taken";
+                email?: "taken";
             } = {};
             if (isUsernameTaken) takenFields.username = "taken";
             if (isEmailTaken) takenFields.email = "taken";
@@ -73,6 +73,9 @@ const readAllUsers = async (req: Request, res: Response) => {
             return {
                 _id: user._id,
                 username: user.username,
+                displayName: user.displayName,
+                bio: user.bio,
+                location: user.location,
                 followerIDs: user.followerIDs,
                 followingIDs: user.followingIDs,
             };
@@ -105,6 +108,9 @@ const readUserById = async (req: Request, res: Response) => {
         return res.json({
             _id: user._id,
             username: user.username,
+            displayName: user.displayName,
+            bio: user.bio,
+            location: user.location,
             followerIDs: user.followerIDs,
             followingIDs: user.followingIDs,
         });
@@ -136,10 +142,37 @@ const updateUserById = async (req: Request, res: Response) => {
             return res.status(404).send("User does not exist");
         }
 
+        let takenFields: {
+            username?: "taken";
+            email?: "taken";
+        } = {};
         // update the user based on the provided data
-        if (req.body?.username) user.username = req.body.username;
+        if (req.body?.username) {
+            // check for duplicate usernames
+            const isUsernameTaken = await User.findOne({
+                username: req.body.username,
+            }).exec();
+            if (isUsernameTaken) takenFields.username = "taken";
+            else user.username = req.body.username;
+        }
 
-        if (req.body?.email) user.email = req.body.email;
+        if (req.body?.email) {
+            // check for duplicate emails
+            const isEmailTaken = await User.findOne({
+                email: req.body.email,
+            }).exec();
+            if (isEmailTaken) takenFields.email = "taken";
+            else user.email = req.body.email;
+        }
+
+        if (takenFields.username || takenFields.email) {
+            // 409 Conflict
+            return res.status(409).send(takenFields);
+        }
+
+        if (req.body?.displayName) user.username = req.body.displayName;
+        if (req.body?.bio) user.username = req.body.bio;
+        if (req.body?.location) user.username = req.body.location;
 
         if (req.body?.password)
             user.password = await bcrypt.hash(req.body.password, 10);

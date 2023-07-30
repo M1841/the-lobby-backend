@@ -12,7 +12,7 @@ import {
     updatePostById,
     likePostById,
     deletePostById,
-} from "../../controller/postsController";
+} from "../../controllers/posts";
 
 router.route("/").post(verifyJWT, createPost).get(readAllPosts);
 router

@@ -1,8 +1,8 @@
-# The Lobby Backend - version 1.2.1
+# The Lobby Backend - version 1.3.0
 
 ## Description
 
-The Lobby is a long running project of mine, constantly being reinvented using new technologies and ideas. Initially the app was loosely inspired by Reddit, and slowly became a place where users could post content, and interact with other users' content (if I had made it publicly available). This iteration contains a reimagination of the Lobby's backend using Typescript and Node.js. It is still in the early stages, and so far it contains full user authentication using JWT, CRUD operations for users, text posts and top level comments, likes for both posts and comments and customizable CORS handling. The next steps are to implement media content support, nested comment replies, search and more. This project is fully open source and anyone is allowed to clone it and use it it in their own projects. I will be updating the extensive README as I add more features and functionality.
+The Lobby is a long running project of mine, constantly being reinvented using new technologies and ideas. Initially the app was loosely inspired by Reddit, and slowly became a place where users could post content, and interact with other users' content (if I had made it publicly available). This iteration contains a reimagination of the Lobby's backend using Typescript and Node.js and is fully open source, anyone being allowed to clone it and use it it in their own projects. I will be updating the extensive README as I add more features and functionality. It is still in the early stages, and so far it contains full user authentication using JWT, search and CRUD operations for users, text posts and comments, likes for both posts and comments and customizable CORS handling. The next steps are to implement media content support and nested comment replies and I might take a break after to work on a different project.
 
 ## Table of Contents
 
@@ -41,8 +41,11 @@ The Lobby is a long running project of mine, constantly being reinvented using n
         -   [PUT /api/comments/:id](#update-comment-by-id)
         -   [PUT /api/like/:id](#like-comment-by-id)
         -   [DELETE /api/comments/:id](#delete-comment-by-id)
+    -   [Search](#search)
+        -   [GET /api/search](#search-all)
 
 -   [Changelog](#changelog)
+    -   [v1.3.0](#v130)
     -   [v1.2.1](#v121)
     -   [v1.2.0](#v120)
     -   [v1.1.1](#v111)
@@ -111,7 +114,7 @@ npm run dev
 
 `GET /`
 
--   Description: Redirects to the GitHub repository of the project
+-   Description: Redirects to the GitHub repository of the project. Also reached if the user tries to access a non-existent endpoint.
 -   Possible Responses:
     -   302 Found: Redirects to the GitHub repository
 
@@ -272,6 +275,9 @@ npm run dev
             {
                 "_id": "64bd1dee78c6046dbec6b98c",
                 "username": "LilySmith82",
+                "displayName": "Lily",
+                "bio": "I'm a software engineer from the UK. I love to travel and take photos.",
+                "location": "London, UK",
                 "followerIDs": ["64bfdfd6e0877113aefe93dc"],
                 "followingIDs": []
             },
@@ -279,6 +285,9 @@ npm run dev
                 "_id": "64bfdfd6e0877113aefe93dc",
                 "username": "WillH19"
                 "followerIDs": [],
+                "displayName": "Willy",
+                "bio": "",
+                "location": "New York, USA",
                 "followingIDs": ["64bd1dee78c6046dbec6b98c"]
             },
             // ...
@@ -302,6 +311,9 @@ npm run dev
         {
             "_id": "64bd1dee78c6046dbec6b98c",
             "username": "LilySmith82",
+            "displayName": "Lily",
+            "bio": "I'm a software engineer from the UK. I love to travel and take photos.",
+            "location": "London, UK",
             "followerIDs": ["64bfdfd6e0877113aefe93dc"],
             "followingIDs": []
         }
@@ -330,14 +342,15 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Updates information about the user (currently username and/or email and/or password). You can send any combination of the three, but you must send at least one. Handling for cases when the user is trying to edit someone else's information (which is currently not allowed) is built in. The example shows a username change. The ID must be added to the end of the URL, like such: `/api/users/64bfdfd6e0877113aefe93dc`
+-   Description: Updates information about the user ( username, email, password, display name, bio, location). You can send any combination of the six, but you must send at least one. Handling for cases when the user is trying to edit someone else's information (which is currently not allowed) is built in. The example shows a username change. The ID must be added to the end of the URL, like such: `/api/users/64bfdfd6e0877113aefe93dc`
 -   Request Body: Any combination of username, email and password
 
     Example:
 
     ```
     {
-        "username": "Willy_H20"
+        "displayName": "Willy",
+        "location": "New York, USA",
     }
     ```
 
@@ -376,6 +389,16 @@ npm run dev
         User does not exist
         ```
 
+    -   409 Conflict: The username or email are already used by another user (only if they're trying to change their username or email)
+
+        Example:
+
+        ```
+        {
+            "username": "taken"
+        }
+        ```
+
 #### Follow user by ID
 
 `PUT /api/users/follow/:id`
@@ -383,7 +406,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Follows or unfollows a user with the specified ID. The ID must be added to the end of the URL, like such: `/api/users/follow/64bfdfd6e0877113aefe93dc`
+-   Description: Follows or unfollows a user with the specified ID. The ID must be added to the end of the URL, like such: `/api/users/follow/64bd1dee78c6046dbec6b98c`
 -   Possible Responses:
 
     -   200 OK: User was followed or unfollowed successfully
@@ -509,15 +532,6 @@ npm run dev
 
         [
             {
-                "_id": "614af8a3a25a2b001f439c01",
-                "content": "Just had an amazing day at the beach! 🏖️🌞",
-                "userID": "64bfdfd6e0877113aefe93dc",
-                "date": "2023-07-25T10:30:00Z",
-                "likeIDs": [],
-                "commentIDs": [],
-                "__v": 0
-            },
-            {
                 "_id": "614af8a3a25a2b001f439c02",
                 "content": "Cannot wait to start my new job tomorrow! 🚀",
                 "userID": "64bd1dee78c6046dbec6b98c",
@@ -526,6 +540,15 @@ npm run dev
                 "commentIDs": ["614af8a3a25a2b001f439c08"],
                 "__v": 0
             },
+            {
+                "_id": "614af8a3a25a2b001f439c01",
+                "content": "Just had an amazing day at the beach! 🏖️🌞",
+                "userID": "64bfdfd6e0877113aefe93dc",
+                "date": "2023-07-25T10:30:00Z",
+                "likeIDs": [],
+                "commentIDs": [],
+                "__v": 0
+            }
             // ...
         ]
 
@@ -1039,11 +1062,76 @@ npm run dev
         Attempted deleting another user's comment
         ```
 
+### Search
+
+#### Search all
+
+`GET /api/search/:query`
+
+-   Description: Returns all the users, posts and comments that match the specified query, which is not case-sensitive, can contain multiple words and for now has to be an exact match. The query must be added to the end of the URL, like such: `/api/search/new job`
+-   Request Body: Contains the search options (true or false), all of which are optional. If none are provided, the search will be performed on all three types of documents.
+
+    Example:
+
+    ```
+    {
+        "posts": true,
+        "comments": true
+    }
+    ```
+
+-   Possible Responses:
+
+    -   200 OK: Search was successful. Returns an object containing the results for each type of document. Each array contains the documents that match the query and options. Empty arrays are returned if there are no results for a specific type of document, and no array is returned if the option is not provided or set to `false`.
+
+        Example:
+
+        ```
+        {
+            "posts": [
+                {
+                    "_id": "614af8a3a25a2b001f439c02",
+                    "content": "Looking forward to my first day at my new job tomorrow! 🚀",
+                    "userID": "64bd1dee78c6046dbec6b98c",
+                    "date": "2023-07-22T18:45:00Z",
+                    "likeIDs": ["64bfdfd6e0877113aefe93dc", "614af8a3a25a2b001f439c08", "614af8a3a25a2b001f439c09"],
+                    "commentIDs": ["614af8a3a25a2b001f439c08, 614af8a3a25a2b001f439c09"],
+                    "__v": 1
+                }
+            ],
+            "comments": []
+            // notice how the comments array is empty because the option was set to true but there are no results
+            // and no users array is returned because the option was not provided
+        }
+        ```
+
+    -   204 No Content: There are no results for the specified query and options
+    -   400 Bad Request: No query was provided
+
+        Example:
+
+        ```
+        No search query was provided
+        ```
+
 ## Changelog
+
+### v1.3.0
+
+Release date: 2023-07-30
+
+-   Implemented search functionality for users, posts and comments
+-   Added an interface for the search results
+-   Added checking for duplicate usernames and emails when updating user information, something that I forgot in the previous versions
+-   Added more profile-oriented fields to the user interface: `displayName`, `bio`, `website`, `location`
+-   Updated user read and update endpoints to include the new fields
+-   Narrowed down types for constants
+-   Renamed some files and directories to improve consistency
+-   Updated README
 
 ### v1.2.1
 
-Release data: 2023-07-27
+Release date: 2023-07-27
 
 -   Implemented user follow/unfollow functionality
 -   Updated the user interface to allow the follow/unfollow functionality
@@ -1073,6 +1161,7 @@ Release date: 2023-07-25
 
 ### v1.1.0
 
+Medium update:
 Release date: 2023-07-25
 
 -   Cleaned up and reorganized the routes

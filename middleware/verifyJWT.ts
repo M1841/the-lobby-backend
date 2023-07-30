@@ -1,10 +1,10 @@
 // Third-Party Modules
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
 
 // Internal Modules
-import User from "../model/User";
-import mongoose from "mongoose";
+import User from "../models/User";
 
 // function that checks the access token before allowing any other operations
 const verifyJWT = (req: Request, res: Response, next: NextFunction) => {

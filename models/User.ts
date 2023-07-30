@@ -14,6 +14,18 @@ const userSchema = new Schema<IUser>({
         type: String,
         required: true,
     },
+    displayName: {
+        type: String,
+        default: "",
+    },
+    bio: {
+        type: String,
+        default: "",
+    },
+    location: {
+        type: String,
+        default: "",
+    },
     refreshToken: {
         type: [String],
         default: [],

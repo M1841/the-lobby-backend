@@ -7,7 +7,7 @@ import {
     handleLogin,
     handleLogout,
     handleRefresh,
-} from "../../controller/authController";
+} from "../../controllers/auth";
 
 // [ info at ../controllers/authController ]
 router
