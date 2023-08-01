@@ -9,7 +9,7 @@ import {
     readCommentById,
     readAllComments,
     readAllCommentsByUser,
-    readAllCommentsByPost,
+    readAllCommentsByParent,
     updateCommentById,
     likeCommentById,
     deleteCommentById,
@@ -23,6 +23,6 @@ router
     .delete(verifyJWT, deleteCommentById);
 router.route("/like/:id").put(verifyJWT, likeCommentById);
 router.route("/user/:id").get(readAllCommentsByUser);
-router.route("/post/:id").get(readAllCommentsByPost);
+router.route("/parent/:id").get(readAllCommentsByParent);
 
 export default router;

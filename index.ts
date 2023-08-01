@@ -16,6 +16,7 @@ import usersRoute from "./routes/api/users";
 import postsRoute from "./routes/api/posts";
 import commentsRoute from "./routes/api/comments";
 import searchRoute from "./routes/api/search";
+import uploadsRoute from "./routes/uploads";
 
 // -------------------- INITIALIZATION -------------------- //
 dotenv.config();
@@ -28,7 +29,7 @@ connectDB();
 app.use(cors(corsOptions));
 app.use(setCorsHeaders);
 
-// Handle Unencoded Form Data
+// Parse URL-encoded bodies
 app.use(express.urlencoded({ extended: false }));
 
 // Parse request bodies as JSON
@@ -52,6 +53,9 @@ app.use("/api/comments", commentsRoute);
 
 // Search
 app.use("/api/search", searchRoute);
+
+// Uploaded Files
+app.use("/uploads", uploadsRoute);
 
 // Root Redirect
 app.use("/*", rootRoute);

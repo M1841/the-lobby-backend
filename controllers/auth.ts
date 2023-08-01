@@ -43,7 +43,7 @@ const handleLogin = async (req: Request, res: Response) => {
             const accessToken = jwt.sign(
                 { username: foundUser.username, userID: foundUser._id },
                 process.env.ACCESS_TOKEN_SECRET as string,
-                { expiresIn: "15m" }
+                { expiresIn: "1h" }
             );
             const newRefreshToken = jwt.sign(
                 { username: foundUser.username, userID: foundUser._id },
@@ -89,7 +89,7 @@ const handleLogin = async (req: Request, res: Response) => {
         }
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.status(500).json(err);
+        return res.status(500).json(err);
     }
 };
 
@@ -128,7 +128,7 @@ const handleLogout = async (req: Request, res: Response) => {
         return res.sendStatus(204);
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.sendStatus(500).json(err);
+        return res.status(500).json(err);
     }
 };
 
@@ -194,7 +194,7 @@ const handleRefresh = async (req: Request, res: Response) => {
                 const accessToken = jwt.sign(
                     { username: decoded.username, userID: decoded.userID },
                     process.env.ACCESS_TOKEN_SECRET as string,
-                    { expiresIn: "15m" }
+                    { expiresIn: "1h" }
                 );
                 const newRefreshToken = jwt.sign(
                     { username: decoded.username, userID: decoded.userID },
@@ -218,12 +218,12 @@ const handleRefresh = async (req: Request, res: Response) => {
                 });
 
                 // send back the access token
-                res.status(200).json({ accessToken });
+                return res.status(200).json({ accessToken });
             }
         );
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.status(500).json(err);
+        return res.status(500).json(err);
     }
 };
 

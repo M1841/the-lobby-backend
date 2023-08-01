@@ -1,8 +1,8 @@
-# The Lobby Backend - version 1.3.0
+# The Lobby Backend - version 1.4.0
 
 ## Description
 
-The Lobby is a long running project of mine, constantly being reinvented using new technologies and ideas. Initially the app was loosely inspired by Reddit, and slowly became a place where users could post content, and interact with other users' content (if I had made it publicly available). This iteration contains a reimagination of the Lobby's backend using Typescript and Node.js and is fully open source, anyone being allowed to clone it and use it it in their own projects. I will be updating the extensive README as I add more features and functionality. It is still in the early stages, and so far it contains full user authentication using JWT, search and CRUD operations for users, text posts and comments, likes for both posts and comments and customizable CORS handling. The next steps are to implement media content support and nested comment replies and I might take a break after to work on a different project.
+The Lobby is a long running project of mine, constantly being reinvented using new technologies and ideas. Initially the app was loosely inspired by Reddit, and slowly became a place where users could post content, and interact with other users' content (if I had made it publicly available). This iteration contains a reimagination of the Lobby's backend using Typescript and Node.js and is fully open source, anyone being allowed to clone it and use it it in their own projects. I will be updating the extensive README as I add more features and functionality. It is still in the early stages, and so far it contains full user authentication using JWT, search and CRUD operations for users, text and multi-media posts and text comments, likes for both posts and comments, ability to nest comments and customizable CORS handling. These are all the features I had in mind, and I will be moving on to a different project for a while. I will still be updating this project, but not as frequently as I did before. I hope you enjoy it and find it useful!
 
 ## Table of Contents
 
@@ -13,6 +13,10 @@ The Lobby is a long running project of mine, constantly being reinvented using n
 
     -   [Root](#root)
         -   [GET /](#github-redirect)
+    -   [Search](#search)
+        -   [GET /api/search](#search-all)
+    -   [Uploads](#uploads)
+        -   [GET /uploads/:fileName](#read-file)
     -   [Auth](#auth)
         -   [POST /api/auth/login](#login)
         -   [GET /api/auth/logout](#logout)
@@ -41,10 +45,9 @@ The Lobby is a long running project of mine, constantly being reinvented using n
         -   [PUT /api/comments/:id](#update-comment-by-id)
         -   [PUT /api/like/:id](#like-comment-by-id)
         -   [DELETE /api/comments/:id](#delete-comment-by-id)
-    -   [Search](#search)
-        -   [GET /api/search](#search-all)
 
 -   [Changelog](#changelog)
+    -   [v1.4.0](#v140)
     -   [v1.3.0](#v130)
     -   [v1.2.1](#v121)
     -   [v1.2.0](#v120)
@@ -117,6 +120,69 @@ npm run dev
 -   Description: Redirects to the GitHub repository of the project. Also reached if the user tries to access a non-existent endpoint.
 -   Possible Responses:
     -   302 Found: Redirects to the GitHub repository
+
+### Search
+
+#### Search all
+
+`GET /api/search/:query`
+
+-   Description: Returns all the users, posts and comments that match the specified query, which is not case-sensitive, can contain multiple words and for now has to be an exact match. The query must be added to the end of the URL, like such: `/api/search/new job`
+-   Request Body: Contains the search options (true or false), all of which are optional. If none are provided, the search will be performed on all three types of documents.
+
+    Example:
+
+    ```
+    {
+        "posts": true,
+        "comments": true
+    }
+    ```
+
+-   Possible Responses:
+
+    -   200 OK: Search was successful. Returns an object containing the results for each type of document. Each array contains the documents that match the query and options. Empty arrays are returned if there are no results for a specific type of document, and no array is returned if the option is not provided or set to `false`.
+
+        Example:
+
+        ```
+        {
+            "posts": [
+                {
+                    "_id": "614af8a3a25a2b001f439c02",
+                    "content": "Looking forward to my first day at my new job tomorrow! 🚀",
+                    "userID": "64bd1dee78c6046dbec6b98c",
+                    "date": "2023-07-22T18:45:00Z",
+                    "likeIDs": ["64bfdfd6e0877113aefe93dc", "614af8a3a25a2b001f439c08", "614af8a3a25a2b001f439c09"],
+                    "commentIDs": ["614af8a3a25a2b001f439c08, 614af8a3a25a2b001f439c09"],
+                    "__v": 1
+                }
+            ],
+            "comments": []
+            // notice how the comments array is empty because the option was set to true but there are no results
+            // and no users array is returned because the option was not provided
+        }
+        ```
+
+    -   204 No Content: There are no results for the specified query and options
+    -   400 Bad Request: No query was provided
+
+        Example:
+
+        ```
+        No search query was provided
+        ```
+
+### Uploads
+
+#### Read file
+
+`GET /uploads/:filename`
+
+-   Description: Returns the file with the specified filename from the uploads folder. The filename must be added to the end of the URL, like such: `/uploads/9c22cede-9fd7-4913-a761-c7a177a64aab.jpg`
+-   Possible Responses:
+    -   200 OK: File was found and returned
+    -   404 Not Found: File was not found
 
 ### Auth
 
@@ -278,6 +344,7 @@ npm run dev
                 "displayName": "Lily",
                 "bio": "I'm a software engineer from the UK. I love to travel and take photos.",
                 "location": "London, UK",
+                "picturePath": "999e3c9a-a1cf-465e-b6a6-b4e203bc1976.jpg",
                 "followerIDs": ["64bfdfd6e0877113aefe93dc"],
                 "followingIDs": []
             },
@@ -288,6 +355,7 @@ npm run dev
                 "displayName": "Willy",
                 "bio": "",
                 "location": "New York, USA",
+                "picturePath": "",
                 "followingIDs": ["64bd1dee78c6046dbec6b98c"]
             },
             // ...
@@ -314,6 +382,7 @@ npm run dev
             "displayName": "Lily",
             "bio": "I'm a software engineer from the UK. I love to travel and take photos.",
             "location": "London, UK",
+            "picturePath": "999e3c9a-a1cf-465e-b6a6-b4e203bc1976.jpg",
             "followerIDs": ["64bfdfd6e0877113aefe93dc"],
             "followingIDs": []
         }
@@ -342,7 +411,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Updates information about the user ( username, email, password, display name, bio, location). You can send any combination of the six, but you must send at least one. Handling for cases when the user is trying to edit someone else's information (which is currently not allowed) is built in. The example shows a username change. The ID must be added to the end of the URL, like such: `/api/users/64bfdfd6e0877113aefe93dc`
+-   Description: Updates information about the user ( username, email, password, display name, bio, location, profile picture). You can send any combination of the seven, but you must send at least one. Handling for cases when the user is trying to edit someone else's information (which is currently not allowed) is built in. The internal file upload function is designed to allow multiple files to be uploaded at once, so you should send the request as `multipart/form-data` and send the picture in the `files` field. The example shows a display name and location change. The ID must be added to the end of the URL, like such: `/api/users/64bfdfd6e0877113aefe93dc`
 -   Request Body: Any combination of username, email and password
 
     Example:
@@ -396,6 +465,32 @@ npm run dev
         ```
         {
             "username": "taken"
+        }
+        ```
+
+    -   413 Payload Too Large: The profile picture is too large or there are too many files
+
+        Example:
+
+        ```
+        {
+            "filesOverSizeLimit": ["profilePicture"]
+        }
+        ```
+
+        or
+
+        ```
+        Too many files. Maximum is 1
+        ```
+
+    -   415 Unsupported Media Type: The profile picture is not a valid image file. Supported formats: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.svg`
+
+        Example:
+
+        ```
+        {
+            "filesWithWrongFormats": ["profilePicture"]
         }
         ```
 
@@ -488,7 +583,7 @@ npm run dev
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
 -   Description: Creates a new post and stores it in the database.
--   Request Body:
+-   Request Body: Text content and optionally media files (images, video or audio). The internal file upload function is designed to allow multiple files to be uploaded at once, so you should send the request as `multipart/form-data` and send the picture in the `files` field. The example shows a post with just text content.
 
     ```
 
@@ -515,6 +610,36 @@ npm run dev
 
         ```
         Missing access token
+        ```
+
+    -   413 Payload Too Large: The media is too large or there are too many files
+
+        Example:
+
+        ```
+        {
+            "filesOverSizeLimit": ["profilePicture"]
+        }
+        ```
+
+        or
+
+        ```
+        Too many files. Maximum is 10
+        ```
+
+    -   415 Unsupported Media Type: The media files are not valid formats. Supported formats:
+
+        -   image: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.svg`
+        -   video: `.mp4`, `.avi`, `.mkv`, `.wmv`, `.flv`, `.webm`
+        -   audio: `.mp3`, `.wav`, `.ogg`, `.aac`, `.flac`, `.m4a`
+
+        Example:
+
+        ```
+        {
+            "filesWithWrongFormats": ["profilePicture"]
+        }
         ```
 
 #### Read all posts
@@ -636,8 +761,8 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Updates the content of a post with the specified ID. You can only update your own posts. The example shows a content change. In the future, when media (picture, video, audio etc) is added, you will be able to update that as well. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
--   Request Body: Since you can only update the content, you only need to send the new content.
+-   Description: Updates the content of a post with the specified ID. You can only update your own posts. The example shows a text content change. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
+-   Request Body: Text content and optionally media files (images, video or audio). The internal file upload function is designed to allow multiple files to be uploaded at once, so you should send the request as `multipart/form-data` and send the picture in the `files` field. If any media files are uploaded, they will replace the existing ones. If no media files are uploaded, the existing ones will remain unchanged.
 
     Example:
 
@@ -673,6 +798,36 @@ npm run dev
 
         ```
         Post does not exist
+        ```
+
+    -   413 Payload Too Large: The media is too large or there are too many files
+
+        Example:
+
+        ```
+        {
+            "filesOverSizeLimit": ["profilePicture"]
+        }
+        ```
+
+        or
+
+        ```
+        Too many files. Maximum is 10
+        ```
+
+    -   415 Unsupported Media Type: The media files are not valid formats. Supported formats:
+
+        -   image: `.jpg`, `.jpeg`, `.png`, `.gif`, `.bmp`, `.svg`
+        -   video: `.mp4`, `.avi`, `.mkv`, `.wmv`, `.flv`, `.webm`
+        -   audio: `.mp3`, `.wav`, `.ogg`, `.aac`, `.flac`, `.m4a`
+
+        Example:
+
+        ```
+        {
+            "filesWithWrongFormats": ["profilePicture"]
+        }
         ```
 
 #### Like post by ID
@@ -718,7 +873,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Deletes a post with the specified ID from the database. Deleting a post does not delete the comments under it. You can only delete your own posts. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
+-   Description: Deletes a post's content, userID and links to media files. Deleting a post does not delete the comments under it or the media files from the storage. You can only delete your own posts. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
 
 -   Possible Responses:
 
@@ -749,8 +904,8 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Creates a new comment and stores it in the database, under a post with the specified ID. The ID must be added to the request body.
--   Request Body: Contains the content of the comment and the ID of the post it belongs to.
+-   Description: Creates a new comment and stores it in the database, under a post or comment with the specified ID. The ID must be added to the request body as `parentID`.
+-   Request Body: Contains the content of the comment and the ID of the post or comment it belongs to.
 
     Example:
 
@@ -758,7 +913,7 @@ npm run dev
 
     {
         "content": "That's awesome! 🎉",
-        "postID": "614af8a3a25a2b001f439c06"
+        "parentID": "614af8a3a25a2b001f439c06"
     }
 
     ```
@@ -806,7 +961,8 @@ npm run dev
                 "_id": "614af8a3a25a2b001f439c08",
                 "content": "That's awesome! 🎉",
                 "userID": "64bfdfd6e0877113aefe93dc",
-                "postID": "614af8a3a25a2b001f439c06",
+                "parentID": "614af8a3a25a2b001f439c06",
+                "commentIDs": ["614af8a3a25a2b001f439c09"],
                 "date": "2023-07-22T18:45:00Z",
                 "likeIDs": ["64bd1dee78c6046dbec6b98c", "614af8a3a25a2b001f439c09"],
                 "__v": 0
@@ -815,7 +971,8 @@ npm run dev
                 "_id": "614af8a3a25a2b001f439c09",
                 "content": "Thanks! 😊",
                 "userID": "64bd1dee78c6046dbec6b98c",
-                "postID": "614af8a3a25a2b001f439c06",
+                "parentID": "614af8a3a25a2b001f439c06",
+                "commentIDs": [],
                 "date": "2023-07-22T18:45:00Z",
                 "likeIDs": ["64bfdfd6e0877113aefe93dc"],
                 "__v": 0
@@ -842,7 +999,8 @@ npm run dev
             "_id": "614af8a3a25a2b001f439c08",
             "content": "That's awesome! 🎉",
             "userID": "64bfdfd6e0877113aefe93dc",
-            "postID": "614af8a3a25a2b001f439c06",
+            "parentID": "614af8a3a25a2b001f439c06",
+            "commentIDs": ["614af8a3a25a2b001f439c09"],
             "date": "2023-07-22T18:45:00Z",
             "likeIDs": ["64bd1dee78c6046dbec6b98c", "614af8a3a25a2b001f439c09"],
             "__v": 0
@@ -869,7 +1027,7 @@ npm run dev
 
 `GET /api/comments/user/:id`
 
--   Description: Returns all the comments by a user with the specified ID. The user ID must be added to the end of the URL, like such: `/api/comments/user/64bfdfd6e0877113aefe93dc`
+-   Description: Returns all the comments by a user with the specified ID. Lower level comments are not returned, but they can be fetched recursively using the `commentIDs` field. The user ID must be added to the end of the URL, like such: `/api/comments/user/64bfdfd6e0877113aefe93dc`
 -   Possible Responses:
 
     -   200 OK: Comments were fetched successfully
@@ -882,11 +1040,13 @@ npm run dev
                 "_id": "614af8a3a25a2b001f439c08",
                 "content": "That's awesome! 🎉",
                 "userID": "64bfdfd6e0877113aefe93dc",
-                "postID": "614af8a3a25a2b001f439c06",
+                "parentID": "614af8a3a25a2b001f439c06",
+                "commentIDs": ["614af8a3a25a2b001f439c09"],
                 "date": "2023-07-22T18:45:00Z",
                 "likeIDs": ["64bd1dee78c6046dbec6b98c", "614af8a3a25a2b001f439c09"],
                 "__v": 0
-            }
+            },
+            // ...
         ]
         ```
 
@@ -900,11 +1060,11 @@ npm run dev
         Invalid user ID
         ```
 
-#### Read all comments by post ID
+#### Read all comments by post or comment ID
 
-`GET /api/comments/post/:id`
+`GET /api/comments/parent/:id`
 
--   Description: Returns all the comments under a post with the specified ID. The post ID must be added to the end of the URL, like such: `/api/comments/post/614af8a3a25a2b001f439c06`
+-   Description: Returns all the top level comments under a post or nested under comment with the specified ID. Lower level comments are not returned, but they can be fetched recursively using the `commentIDs` field. The ID must be added to the end of the URL, like such: `/api/comments/parent/614af8a3a25a2b001f439c06`.
 -   Possible Responses:
 
     -   200 OK: Comments were fetched successfully
@@ -917,18 +1077,10 @@ npm run dev
                 "_id": "614af8a3a25a2b001f439c08",
                 "content": "That's awesome! 🎉",
                 "userID": "64bfdfd6e0877113aefe93dc",
-                "postID": "614af8a3a25a2b001f439c06",
+                "parentID": "614af8a3a25a2b001f439c06",
+                "commentIDs": ["614af8a3a25a2b001f439c09"],
                 "date": "2023-07-22T18:45:00Z",
                 "likeIDs": ["64bd1dee78c6046dbec6b98c", "614af8a3a25a2b001f439c09"],
-                "__v": 0
-            },
-            {
-                "_id": "614af8a3a25a2b001f439c09",
-                "content": "Thanks! 😊",
-                "userID": "64bd1dee78c6046dbec6b98c",
-                "postID": "614af8a3a25a2b001f439c06",
-                "date": "2023-07-22T18:45:00Z",
-                "likeIDs": ["64bfdfd6e0877113aefe93dc"],
                 "__v": 0
             },
             // ...
@@ -1034,7 +1186,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Deletes a comment with the specified ID from the database. You can only delete your own comments. The ID must be added to the end of the URL, like such: `/api/comments/614af8a3a25a2b001f439c08`
+-   Description: Deletes the comment content and user ID. Deleting a comment doesn't delete the comments under it. You can only delete your own comments. The ID must be added to the end of the URL, like such: `/api/comments/614af8a3a25a2b001f439c08`
 -   Possible Responses:
 
     -   204 No Content: Comment was deleted successfully or it didn't exist in the first place
@@ -1062,59 +1214,19 @@ npm run dev
         Attempted deleting another user's comment
         ```
 
-### Search
-
-#### Search all
-
-`GET /api/search/:query`
-
--   Description: Returns all the users, posts and comments that match the specified query, which is not case-sensitive, can contain multiple words and for now has to be an exact match. The query must be added to the end of the URL, like such: `/api/search/new job`
--   Request Body: Contains the search options (true or false), all of which are optional. If none are provided, the search will be performed on all three types of documents.
-
-    Example:
-
-    ```
-    {
-        "posts": true,
-        "comments": true
-    }
-    ```
-
--   Possible Responses:
-
-    -   200 OK: Search was successful. Returns an object containing the results for each type of document. Each array contains the documents that match the query and options. Empty arrays are returned if there are no results for a specific type of document, and no array is returned if the option is not provided or set to `false`.
-
-        Example:
-
-        ```
-        {
-            "posts": [
-                {
-                    "_id": "614af8a3a25a2b001f439c02",
-                    "content": "Looking forward to my first day at my new job tomorrow! 🚀",
-                    "userID": "64bd1dee78c6046dbec6b98c",
-                    "date": "2023-07-22T18:45:00Z",
-                    "likeIDs": ["64bfdfd6e0877113aefe93dc", "614af8a3a25a2b001f439c08", "614af8a3a25a2b001f439c09"],
-                    "commentIDs": ["614af8a3a25a2b001f439c08, 614af8a3a25a2b001f439c09"],
-                    "__v": 1
-                }
-            ],
-            "comments": []
-            // notice how the comments array is empty because the option was set to true but there are no results
-            // and no users array is returned because the option was not provided
-        }
-        ```
-
-    -   204 No Content: There are no results for the specified query and options
-    -   400 Bad Request: No query was provided
-
-        Example:
-
-        ```
-        No search query was provided
-        ```
-
 ## Changelog
+
+### v1.4.0
+
+Release date: 2023-08-01
+
+-   Implemented file upload functionality
+-   Added picture fields in the user and post interfaces
+-   Updated the create and update endpoints to include the new fields
+-   Added endpoint for fetching user uploaded files
+-   Implemented nested comments. Comments can now be nested under other comments, as replies
+-   Updated the comment interface to include the new fields
+-   Changed the delete routes for posts and comments to only delete their content and user IDs, instead of deleting the entire document. This is to prevent orphaned comments from being left partly inaccessible when a parent is deleted
 
 ### v1.3.0
 
@@ -1161,7 +1273,6 @@ Release date: 2023-07-25
 
 ### v1.1.0
 
-Medium update:
 Release date: 2023-07-25
 
 -   Cleaned up and reorganized the routes

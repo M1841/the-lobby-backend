@@ -7,12 +7,15 @@ const postSchema = new Schema<IPost>({
         required: true,
     },
     userID: {
-        type: mongoose.Types.ObjectId,
-        required: true,
+        type: mongoose.Types.ObjectId || null,
     },
     date: {
         type: Date,
         required: true,
+    },
+    mediaPaths: {
+        type: [String],
+        default: [],
     },
     likeIDs: {
         type: [mongoose.Types.ObjectId],

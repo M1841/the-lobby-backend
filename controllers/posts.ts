@@ -1,9 +1,15 @@
+// Core Node Modules
+import path from "path";
+
 // Third-Party Modules
 import { Request, Response } from "express";
 import mongoose from "mongoose";
+import fileUpload from "express-fileupload";
+import { v4 as uuidv4 } from "uuid";
 
 // Internal Modules
 import Post from "../models/Post";
+import { uploadFiles } from "./fileUpload";
 
 const isValidID = mongoose.Types.ObjectId.isValid;
 
@@ -16,18 +22,41 @@ const createPost = async (req: Request, res: Response) => {
     }
 
     try {
+        const mediaPaths: string[] = [];
+        if (req.files) {
+            const reqFiles = req.files as fileUpload.FileArray;
+            let fileCount = 0;
+            Object.keys(reqFiles).forEach((key) => {
+                fileCount++;
+                const file = reqFiles[key] as fileUpload.UploadedFile;
+                file.name = uuidv4() + path.extname(file.name);
+                mediaPaths.push(file.name);
+                reqFiles[key] = file;
+            });
+            if (fileCount > 10) {
+                // 413 Payload Too Large
+                return res.status(413).send("Too many files. Maximum is 10");
+            }
+            req.files = reqFiles;
+            req.body.image = req.body.video = req.body.audio = true;
+        }
+
         // create and store the new post
         await Post.create({
             content: req.body.content,
             userID: req.body.currentUserID,
             date: new Date(),
+            mediaPaths,
         });
 
-        // 201 Created
-        return res.sendStatus(201);
+        if (req.files) uploadFiles(req, res);
+        else {
+            // 201 Created
+            return res.sendStatus(201);
+        }
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.sendStatus(500).json(err);
+        return res.status(500).json(err);
     }
 };
 
@@ -87,7 +116,7 @@ const readAllPostsByUser = async (req: Request, res: Response) => {
         return res.json(posts);
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.sendStatus(500).json(err);
+        return res.status(500).json(err);
     }
 };
 
@@ -119,13 +148,35 @@ const updatePostById = async (req: Request, res: Response) => {
         // update the post based on the provided data
         if (req.body?.content) post.content = req.body.content;
 
+        const mediaPaths: string[] = [];
+        if (req.files) {
+            const reqFiles = req.files as fileUpload.FileArray;
+            let fileCount = 0;
+            Object.keys(reqFiles).forEach((key) => {
+                fileCount++;
+                const file = reqFiles[key] as fileUpload.UploadedFile;
+                file.name = uuidv4() + path.extname(file.name);
+                mediaPaths.push(file.name);
+                reqFiles[key] = file;
+            });
+            if (fileCount > 1) {
+                // 413 Payload Too Large
+                return res.status(413).send("Too many files. Maximum is 10");
+            }
+            req.files = reqFiles;
+            req.body.image = req.body.video = req.body.audio = true;
+        }
+
         await post.save();
 
-        // 200 OK
-        return res.sendStatus(200);
+        if (req.files) uploadFiles(req, res);
+        else {
+            // 200 OK
+            return res.sendStatus(200);
+        }
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.sendStatus(500).json(err);
+        return res.status(500).json(err);
     }
 };
 
@@ -162,7 +213,7 @@ const likePostById = async (req: Request, res: Response) => {
         return res.sendStatus(200);
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.sendStatus(500).json(err);
+        return res.status(500).json(err);
     }
 };
 
@@ -187,14 +238,19 @@ const deletePostById = async (req: Request, res: Response) => {
                     .send("Attempted deleting another user's post");
             }
 
-            await Post.deleteOne({ _id: req.params.id });
+            // delete fields from the post but keep it in the database
+            post.content = "[deleted]";
+            post.userID = null;
+            post.mediaPaths = [];
+
+            await post.save();
         }
 
         // 204 No Content
         return res.sendStatus(204);
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.sendStatus(500).json(err);
+        return res.status(500).json(err);
     }
 };
 

@@ -50,7 +50,7 @@ const verifyJWT = (req: Request, res: Response, next: NextFunction) => {
         );
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.status(500).json(err);
+        return res.status(500).json(err);
     }
 };
 

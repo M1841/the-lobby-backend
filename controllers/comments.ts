@@ -11,33 +11,33 @@ const isValidID = mongoose.Types.ObjectId.isValid;
 // ------------------------ CREATE ------------------------ //
 const createNewComment = async (req: Request, res: Response) => {
     // check for required attributes
-    if (!req?.body?.content || !req?.body?.postID) {
+    if (!req?.body?.content || !req?.body?.parentID) {
         // 400 Bad Request
-        return res.status(400).send("Missing comment content or post ID");
+        return res.status(400).send("Missing comment content or parent ID");
     }
 
     try {
-        const post = await Post.findById(req.body.postID).exec();
+        const parent =
+            (await Post.findById(req.body.parentID).exec()) ||
+            (await Comment.findById(req.body.parentID).exec());
 
         // check if no post was found
-        if (!post) {
+        if (!parent) {
             // 404 Not Found
-            return res.status(404).send("Post does not exist");
+            return res.status(404).send("Parent does not exist");
         }
 
         // create and store the new comment
         const comment = await Comment.create({
             content: req.body.content,
             userID: req.body.currentUserID,
-            postID: req.body.postID,
+            parentID: req.body.parentID,
             date: new Date(),
-            likeIDs: [] as string[],
-            commentIDs: [] as string[],
         });
 
-        // add the ID of new comment to the corresponding post
-        post.commentIDs.push(comment._id);
-        await post.save();
+        // add the ID of new comment to the corresponding parent
+        parent.commentIDs.push(comment._id);
+        await parent.save();
 
         // 201 Created
         return res.sendStatus(201);
@@ -108,19 +108,19 @@ const readAllCommentsByUser = async (req: Request, res: Response) => {
     }
 };
 
-const readAllCommentsByPost = async (req: Request, res: Response) => {
+const readAllCommentsByParent = async (req: Request, res: Response) => {
     // check if the ID is missing or incorrectly formatted
     if (!req?.params?.id || !isValidID(req?.params?.id)) {
         // 400 Bad Request
-        return res.status(400).send("Invalid post ID");
+        return res.status(400).send("Invalid parent ID");
     }
     try {
-        const comment = await Comment.find({ postID: req.params.id });
+        const comment = await Comment.find({ parentID: req.params.id });
 
         // check if no comment was found
         if (!comment) {
             // 204 No Content
-            return res.sendStatus(204).send("Comment does not exist");
+            return res.sendStatus(204);
         }
 
         return res.json(comment);
@@ -164,7 +164,7 @@ const updateCommentById = async (req: Request, res: Response) => {
         return res.sendStatus(200);
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.sendStatus(500).json(err);
+        return res.status(500).json(err);
     }
 };
 
@@ -201,7 +201,7 @@ const likeCommentById = async (req: Request, res: Response) => {
         return res.sendStatus(200);
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.sendStatus(500).json(err);
+        return res.status(500).json(err);
     }
 };
 
@@ -212,41 +212,30 @@ const deleteCommentById = async (req: Request, res: Response) => {
         // 400 Bad Request
         return res.status(400).send("Invalid comment ID");
     }
-
     try {
         const comment = await Comment.findById(req.params.id).exec();
 
-        // only delete the post if it exists
+        // check if the comment exists
         if (comment) {
-            const post = await Post.findById(req.body.postID).exec();
-
-            // check if no post was found
-            if (!post) {
-                // 204 No Content
-                return res
-                    .status(204)
-                    .send(`No post matches ID = ${req.body.postID}`);
-            }
-            // check if the post belongs to the user
+            // check if the comment belongs to the user
             if (comment.userID !== req.body.currentUserID) {
                 // 403 Forbidden
                 return res
                     .status(403)
                     .send("Attempted deleting another user's comment");
             }
+            // delete fields from the comment but keep it in the database
+            comment.content = "[deleted]";
+            comment.userID = null;
 
-            await Comment.deleteOne({ _id: req.params.id });
-
-            // remove the ID of new comment to the corresponding post
-            post.commentIDs.filter((commentID) => commentID !== req.params.id);
-            await post.save();
+            await comment.save();
         }
 
         // 204 No Content
-        return res.sendStatus(204);
+        return res.sendStatus(200);
     } catch (err: unknown) {
         // 500 Internal Server Error
-        res.sendStatus(500).json(err);
+        return res.status(500).json(err);
     }
 };
 
@@ -255,7 +244,7 @@ export {
     readAllComments,
     readCommentById,
     readAllCommentsByUser,
-    readAllCommentsByPost,
+    readAllCommentsByParent,
     updateCommentById,
     likeCommentById,
     deleteCommentById,

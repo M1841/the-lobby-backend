@@ -26,6 +26,10 @@ const userSchema = new Schema<IUser>({
         type: String,
         default: "",
     },
+    picturePath: {
+        type: String,
+        default: "",
+    },
     refreshToken: {
         type: [String],
         default: [],

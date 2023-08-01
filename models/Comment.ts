@@ -1,5 +1,5 @@
 // Third-Party Modules
-import { Schema, model } from "mongoose";
+import mongoose, { Schema, model } from "mongoose";
 
 const commentSchema = new Schema<IComment>({
     content: {
@@ -7,19 +7,22 @@ const commentSchema = new Schema<IComment>({
         required: true,
     },
     userID: {
-        type: String,
+        type: mongoose.Types.ObjectId || null,
+    },
+    parentID: {
+        type: mongoose.Types.ObjectId,
         required: true,
     },
-    postID: {
-        type: String,
-        required: true,
+    commentIDs: {
+        type: [mongoose.Types.ObjectId],
+        default: [],
     },
     date: {
         type: Date,
         required: true,
     },
     likeIDs: {
-        type: [String],
+        type: [mongoose.Types.ObjectId],
         default: [],
     },
 });

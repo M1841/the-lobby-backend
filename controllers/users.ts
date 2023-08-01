@@ -1,10 +1,16 @@
+// Core Node Modules
+import path from "path";
+
 // Third-Party Modules
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
+import { v4 as uuidv4 } from "uuid";
+import fileUpload from "express-fileupload";
 
 // Internal Modules
 import User from "../models/User";
+import { uploadFiles } from "./fileUpload";
 
 const isValidID = mongoose.Types.ObjectId.isValid;
 
@@ -76,6 +82,7 @@ const readAllUsers = async (req: Request, res: Response) => {
                 displayName: user.displayName,
                 bio: user.bio,
                 location: user.location,
+                picturePath: user.picturePath,
                 followerIDs: user.followerIDs,
                 followingIDs: user.followingIDs,
             };
@@ -111,6 +118,7 @@ const readUserById = async (req: Request, res: Response) => {
             displayName: user.displayName,
             bio: user.bio,
             location: user.location,
+            picturePath: user.picturePath,
             followerIDs: user.followerIDs,
             followingIDs: user.followingIDs,
         });
@@ -173,14 +181,34 @@ const updateUserById = async (req: Request, res: Response) => {
         if (req.body?.displayName) user.username = req.body.displayName;
         if (req.body?.bio) user.username = req.body.bio;
         if (req.body?.location) user.username = req.body.location;
-
         if (req.body?.password)
             user.password = await bcrypt.hash(req.body.password, 10);
 
+        if (req.files) {
+            const reqFiles = req.files as fileUpload.FileArray;
+            let fileCount = 0;
+            Object.keys(reqFiles).forEach((key) => {
+                fileCount++;
+                const file = reqFiles[key] as fileUpload.UploadedFile;
+                file.name = uuidv4() + path.extname(file.name);
+                user.picturePath = file.name;
+                reqFiles[key] = file;
+            });
+            if (fileCount > 1) {
+                // 413 Payload Too Large
+                return res.status(413).send("Too many files. Maximum is 1");
+            }
+            req.files = reqFiles;
+            req.body.image = true;
+        }
+
         await user.save();
 
-        // 200 OK
-        return res.sendStatus(200);
+        if (req.files) uploadFiles(req, res);
+        else {
+            // 200 OK
+            return res.sendStatus(200);
+        }
     } catch (err: unknown) {
         // 500 Internal Server Error
         return res.status(500).json(err);
