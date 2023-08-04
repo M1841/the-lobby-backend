@@ -1,15 +1,14 @@
-// Core Node Modules
-import path from "path";
-
 // Third-Party Modules
 import { Request, Response } from "express";
 import bcrypt from "bcrypt";
 import mongoose from "mongoose";
-import { v4 as uuidv4 } from "uuid";
 import fileUpload from "express-fileupload";
 
 // Internal Modules
 import User from "../models/User";
+import Post from "../models/Post";
+import Comment from "../models/Comment";
+import File from "../models/File";
 import { uploadFiles } from "./fileUpload";
 
 const isValidID = mongoose.Types.ObjectId.isValid;
@@ -82,7 +81,7 @@ const readAllUsers = async (req: Request, res: Response) => {
                 displayName: user.displayName,
                 bio: user.bio,
                 location: user.location,
-                picturePath: user.picturePath,
+                pictureID: user.pictureID,
                 followerIDs: user.followerIDs,
                 followingIDs: user.followingIDs,
             };
@@ -118,7 +117,7 @@ const readUserById = async (req: Request, res: Response) => {
             displayName: user.displayName,
             bio: user.bio,
             location: user.location,
-            picturePath: user.picturePath,
+            pictureID: user.pictureID,
             followerIDs: user.followerIDs,
             followingIDs: user.followingIDs,
         });
@@ -189,26 +188,28 @@ const updateUserById = async (req: Request, res: Response) => {
             let fileCount = 0;
             Object.keys(reqFiles).forEach((key) => {
                 fileCount++;
+                if (fileCount > 1) {
+                    // 413 Payload Too Large
+                    return res.status(413).send("Too many files. Maximum is 1");
+                }
                 const file = reqFiles[key] as fileUpload.UploadedFile;
-                file.name = uuidv4() + path.extname(file.name);
-                user.picturePath = file.name;
                 reqFiles[key] = file;
             });
-            if (fileCount > 1) {
-                // 413 Payload Too Large
-                return res.status(413).send("Too many files. Maximum is 1");
-            }
             req.files = reqFiles;
             req.body.image = true;
+            const fileIDs = (await uploadFiles(
+                req,
+                res
+            )) as unknown as mongoose.Types.ObjectId[];
+            const oldPicture = await File.findById(user.pictureID);
+            if (oldPicture) await File.deleteOne({ _id: user.pictureID });
+            user.pictureID = fileIDs[0];
         }
 
         await user.save();
 
-        if (req.files) uploadFiles(req, res);
-        else {
-            // 200 OK
-            return res.sendStatus(200);
-        }
+        // 200 OK
+        return res.sendStatus(200);
     } catch (err: unknown) {
         // 500 Internal Server Error
         return res.status(500).json(err);
@@ -287,6 +288,68 @@ const deleteUserById = async (req: Request, res: Response) => {
 
         // only delete the account if it exists
         if (user) {
+            // delete the profile picture
+            const picture = await File.findById(user.pictureID);
+            if (picture) await File.deleteOne({ _id: user.pictureID });
+
+            // disown posts
+            const posts = await Post.find({ userID: user._id });
+            if (posts) {
+                posts.map(async (post) => {
+                    post.userID = null;
+                    await post.save();
+                });
+            }
+            // disown comments
+            const comments = await Comment.find({ userID: user._id });
+            if (comments) {
+                comments.map(async (comment) => {
+                    comment.userID = null;
+                    await comment.save();
+                });
+            }
+
+            // unlike posts
+            const likedPosts = await Post.find({ likeIDs: user._id });
+            if (likedPosts) {
+                likedPosts.map(async (likedPost) => {
+                    likedPost.likeIDs = likedPost.likeIDs.filter(
+                        (userID) => userID.toString() !== user._id
+                    );
+                    await likedPost.save();
+                });
+            }
+            // unlike comments
+            const likedComments = await Comment.find({ likeIDs: user._id });
+            if (likedComments) {
+                likedComments.map(async (likedComment) => {
+                    likedComment.likeIDs = likedComment.likeIDs.filter(
+                        (userID) => userID.toString() !== user._id
+                    );
+                    await likedComment.save();
+                });
+            }
+
+            // unfollow users
+            const following = await User.find({ followerIDs: user._id });
+            if (following) {
+                following.map(async (followedUser) => {
+                    followedUser.followerIDs = followedUser.followerIDs.filter(
+                        (userID) => userID.toString() !== user._id
+                    );
+                    await followedUser.save();
+                });
+            }
+            // remove followers
+            const followers = await User.find({ followingIDs: user._id });
+            if (followers) {
+                followers.map(async (follower) => {
+                    follower.followingIDs = follower.followingIDs.filter(
+                        (userID) => userID.toString() !== user._id
+                    );
+                    await follower.save();
+                });
+            }
             await User.deleteOne({ _id: req.params.id });
         }
 

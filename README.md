@@ -1,14 +1,16 @@
-# The Lobby Backend - version 1.4.0
+# The Lobby Backend - version 1.4.1
 
 ## Description
 
-The Lobby is a long running project of mine, constantly being reinvented using new technologies and ideas. Initially the app was loosely inspired by Reddit, and slowly became a place where users could post content, and interact with other users' content (if I had made it publicly available). This iteration contains a reimagination of the Lobby's backend using Typescript and Node.js and is fully open source, anyone being allowed to clone it and use it it in their own projects. I will be updating the extensive README as I add more features and functionality. It is still in the early stages, and so far it contains full user authentication using JWT, search and CRUD operations for users, text and multi-media posts and text comments, likes for both posts and comments, ability to nest comments and customizable CORS handling. These are all the features I had in mind, and I will be moving on to a different project for a while. I will still be updating this project, but not as frequently as I did before. I hope you enjoy it and find it useful!
+The Lobby is a long running project of mine, constantly being reinvented using new technologies and ideas. Initially the app was loosely inspired by Reddit, and slowly became a place where users could post content, and interact with other users' content (if I had made it publicly available). This iteration contains a reimagination of the Lobby's backend using Typescript and Node.js and is fully open source, anyone being allowed to clone it and use it it in their own projects. I will be updating the extensive README as I add more features and functionality. Right now it contains full user authentication using JWT, search and CRUD operations for users, multi-media posts and nested text comments, likes, followers and customizable CORS handling. I hope you enjoy it and find it useful!
 
 ## Table of Contents
 
 -   [Getting Started](#getting-started)
-    -   [Prerequisites](#prerequisites)
-    -   [Installation](#installation)
+    -   [Use the API directly](#use-the-api-directly)
+    -   [Self-hosting](#self-hosting)
+        -   [Prerequisites](#prerequisites)
+        -   [Installation](#installation)
 -   [Endpoints](#endpoints)
 
     -   [Root](#root)
@@ -16,7 +18,7 @@ The Lobby is a long running project of mine, constantly being reinvented using n
     -   [Search](#search)
         -   [GET /api/search](#search-all)
     -   [Uploads](#uploads)
-        -   [GET /uploads/:fileName](#read-file)
+        -   [GET /api/uploads/:id](#read-file)
     -   [Auth](#auth)
         -   [POST /api/auth/login](#login)
         -   [GET /api/auth/logout](#logout)
@@ -47,6 +49,7 @@ The Lobby is a long running project of mine, constantly being reinvented using n
         -   [DELETE /api/comments/:id](#delete-comment-by-id)
 
 -   [Changelog](#changelog)
+    -   [v1.4.1](#v141)
     -   [v1.4.0](#v140)
     -   [v1.3.0](#v130)
     -   [v1.2.1](#v121)
@@ -57,13 +60,21 @@ The Lobby is a long running project of mine, constantly being reinvented using n
 
 ## Getting Started
 
-### Prerequisites
+### Use the API directly
+
+The API is currently hosted on Render and can be accessed at https://the-lobby-backend.onrender.com. You can make requests to the API using the [endpoints described below](#endpoints).
+
+### Self-hosting
+
+If you want to host the project yourself, use it as a template or just play around with it, follow the steps below:
+
+#### Prerequisites
 
 -   [Node.js](https://nodejs.org/en/) (v18.16.1 or higher)
 -   npm or other package managers
 -   A [MongoDB](https://mongodb.com/) database - [Tutorial](https://youtu.be/-PdjUx9JZ2E) (2:05 - 8:47)
 
-### Installation
+#### Installation
 
 1. Clone the repository
 
@@ -177,12 +188,12 @@ npm run dev
 
 #### Read file
 
-`GET /uploads/:filename`
+`GET /api/uploads/:id`
 
--   Description: Returns the file with the specified filename from the uploads folder. The filename must be added to the end of the URL, like such: `/uploads/9c22cede-9fd7-4913-a761-c7a177a64aab.jpg`
+-   Description: Returns a file with the specified ID from the database. The ID must be added to the end of the URL, like such: `/uploads/64cd010abb97ac82ceb62070`
 -   Possible Responses:
-    -   200 OK: File was found and returned
-    -   404 Not Found: File was not found
+    -   200 OK: The file was found and returned
+    -   404 Not Found: No file was found with the specified ID
 
 ### Auth
 
@@ -344,7 +355,7 @@ npm run dev
                 "displayName": "Lily",
                 "bio": "I'm a software engineer from the UK. I love to travel and take photos.",
                 "location": "London, UK",
-                "picturePath": "999e3c9a-a1cf-465e-b6a6-b4e203bc1976.jpg",
+                "pictureID": "64cd010abb97ac82ceb62070",
                 "followerIDs": ["64bfdfd6e0877113aefe93dc"],
                 "followingIDs": []
             },
@@ -355,7 +366,6 @@ npm run dev
                 "displayName": "Willy",
                 "bio": "",
                 "location": "New York, USA",
-                "picturePath": "",
                 "followingIDs": ["64bd1dee78c6046dbec6b98c"]
             },
             // ...
@@ -382,7 +392,7 @@ npm run dev
             "displayName": "Lily",
             "bio": "I'm a software engineer from the UK. I love to travel and take photos.",
             "location": "London, UK",
-            "picturePath": "999e3c9a-a1cf-465e-b6a6-b4e203bc1976.jpg",
+            "pictureID": "64cd010abb97ac82ceb62070",
             "followerIDs": ["64bfdfd6e0877113aefe93dc"],
             "followingIDs": []
         }
@@ -411,7 +421,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Updates information about the user ( username, email, password, display name, bio, location, profile picture). You can send any combination of the seven, but you must send at least one. Handling for cases when the user is trying to edit someone else's information (which is currently not allowed) is built in. The internal file upload function is designed to allow multiple files to be uploaded at once, so you should send the request as `multipart/form-data` and send the picture in the `files` field. The example shows a display name and location change. The ID must be added to the end of the URL, like such: `/api/users/64bfdfd6e0877113aefe93dc`
+-   Description: Updates information about the user ( username, email, password, display name, bio, location, profile picture). You can send any combination of the seven, but you must send at least one. Handling for cases when the user is trying to edit someone else's information (which is currently not allowed) is built in. When a new profile picture is uploaded, the old one is deleted from the database. The example shows a display name and location change. The ID must be added to the end of the URL, like such: `/api/users/64bfdfd6e0877113aefe93dc`
 -   Request Body: Any combination of username, email and password
 
     Example:
@@ -474,6 +484,7 @@ npm run dev
 
         ```
         {
+            "sizeLimit": "10MB"
             "filesOverSizeLimit": ["profilePicture"]
         }
         ```
@@ -544,7 +555,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Deletes the user from the database. Handling for cases when the user is trying to delete someone else's account (which is currently not allowed) is built in as well. Deleting a user doesn't delete their posts, comments, or remove the user from other users' follower or following lists. The ID must be added to the end of the URL, like such: `/api/users/64bfdfd6e0877113aefe93dc`
+-   Description: Deletes the user from the database. Handling for cases when the user is trying to delete someone else's account (which is currently not allowed) is built in as well. Deleting a user also deletes their profile picture from the database. The ID must be added to the end of the URL, like such: `/api/users/64bfdfd6e0877113aefe93dc`
 
 -   Possible responses:
 
@@ -583,7 +594,7 @@ npm run dev
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
 -   Description: Creates a new post and stores it in the database.
--   Request Body: Text content and optionally media files (images, video or audio). The internal file upload function is designed to allow multiple files to be uploaded at once, so you should send the request as `multipart/form-data` and send the picture in the `files` field. The example shows a post with just text content.
+-   Request Body: Text content and optionally media files (images, video or audio). The example shows a post with just text content.
 
     ```
 
@@ -618,7 +629,8 @@ npm run dev
 
         ```
         {
-            "filesOverSizeLimit": ["profilePicture"]
+            "sizeLimit": "10MB",
+            "filesOverSizeLimit": ["image3", "video1"]
         }
         ```
 
@@ -638,7 +650,7 @@ npm run dev
 
         ```
         {
-            "filesWithWrongFormats": ["profilePicture"]
+            "filesWithWrongFormats": ["image3", "video1"]
         }
         ```
 
@@ -762,7 +774,7 @@ npm run dev
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
 -   Description: Updates the content of a post with the specified ID. You can only update your own posts. The example shows a text content change. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
--   Request Body: Text content and optionally media files (images, video or audio). The internal file upload function is designed to allow multiple files to be uploaded at once, so you should send the request as `multipart/form-data` and send the picture in the `files` field. If any media files are uploaded, they will replace the existing ones. If no media files are uploaded, the existing ones will remain unchanged.
+-   Request Body: Text content and optionally media files (images, video or audio). If any media files are uploaded, the old ones will be deleted and replaced. If no media files are uploaded, the old ones will remain unchanged.
 
     Example:
 
@@ -806,7 +818,8 @@ npm run dev
 
         ```
         {
-            "filesOverSizeLimit": ["profilePicture"]
+            "sizeLimit": "10MB",
+            "filesOverSizeLimit": ["image3", "video1]
         }
         ```
 
@@ -826,7 +839,7 @@ npm run dev
 
         ```
         {
-            "filesWithWrongFormats": ["profilePicture"]
+            "filesWithWrongFormats": ["image3", "video1"]
         }
         ```
 
@@ -873,7 +886,7 @@ npm run dev
 `Authorization: Bearer [access token]`
 
 -   **PROTECTED ROUTE**: Requires an access token in the authorization header.
--   Description: Deletes a post's content, userID and links to media files. Deleting a post does not delete the comments under it or the media files from the storage. You can only delete your own posts. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
+-   Description: Deletes a post's content, userID and links to media files. Deleting a post also deletes the attached media files from the database, but not the comments under it. You can only delete your own posts. The ID must be added to the end of the URL, like such: `/api/posts/614af8a3a25a2b001f439c06`
 
 -   Possible Responses:
 
@@ -1216,6 +1229,20 @@ npm run dev
 
 ## Changelog
 
+### v1.5.0
+
+Release date: 2023-08-04
+
+-   In between versions, deployed the API on Render and noticed the problems that needed addressing in this version
+-   Overhauled the file uploading system to save files to the database instead of the server's file system, to make it more deployment friendly
+-   Updated all the update endpoints to delete the old files from the database when a new file is uploaded
+-   Updated the user and post models and interfaces to include file IDs instead of file paths
+-   Added an interface and model for files
+-   Updated the file fetching endpoint to require an ID instead of a path
+-   Updated the delete user endpoint to delete their profile picture, likes, and remove them from the followers and following arrays of other users
+-   Updated the delete post endpoint to delete all the attached media files from the database
+-   Updated README
+
 ### v1.4.0
 
 Release date: 2023-08-01
@@ -1224,9 +1251,10 @@ Release date: 2023-08-01
 -   Added picture fields in the user and post interfaces
 -   Updated the create and update endpoints to include the new fields
 -   Added endpoint for fetching user uploaded files
--   Implemented nested comments. Comments can now be nested under other comments, as replies
+-   Implemented nested comments. Now comments behave like a tree structure, where each comment can have multiple child comments.
 -   Updated the comment interface to include the new fields
 -   Changed the delete routes for posts and comments to only delete their content and user IDs, instead of deleting the entire document. This is to prevent orphaned comments from being left partly inaccessible when a parent is deleted
+-   Updated README
 
 ### v1.3.0
 

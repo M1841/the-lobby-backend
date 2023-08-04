@@ -48,7 +48,7 @@ const readSearchResults = async (req: Request, res: Response) => {
                         displayName: user.displayName,
                         bio: user.bio,
                         location: user.location,
-                        picturePath: user.picturePath,
+                        pictureID: user.pictureID,
                         followerIDs: user.followerIDs,
                         followingIDs: user.followingIDs,
                     };

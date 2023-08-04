@@ -1,14 +1,11 @@
-// Core Node Modules
-import path from "path";
-
 // Third-Party Modules
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import fileUpload from "express-fileupload";
-import { v4 as uuidv4 } from "uuid";
 
 // Internal Modules
 import Post from "../models/Post";
+import File from "../models/File";
 import { uploadFiles } from "./fileUpload";
 
 const isValidID = mongoose.Types.ObjectId.isValid;
@@ -22,23 +19,27 @@ const createPost = async (req: Request, res: Response) => {
     }
 
     try {
-        const mediaPaths: string[] = [];
+        let mediaIDs: mongoose.Types.ObjectId[] = [];
         if (req.files) {
             const reqFiles = req.files as fileUpload.FileArray;
             let fileCount = 0;
             Object.keys(reqFiles).forEach((key) => {
                 fileCount++;
+                if (fileCount > 10) {
+                    // 413 Payload Too Large
+                    return res
+                        .status(413)
+                        .send("Too many files. Maximum is 10");
+                }
                 const file = reqFiles[key] as fileUpload.UploadedFile;
-                file.name = uuidv4() + path.extname(file.name);
-                mediaPaths.push(file.name);
                 reqFiles[key] = file;
             });
-            if (fileCount > 10) {
-                // 413 Payload Too Large
-                return res.status(413).send("Too many files. Maximum is 10");
-            }
             req.files = reqFiles;
             req.body.image = req.body.video = req.body.audio = true;
+            mediaIDs = (await uploadFiles(
+                req,
+                res
+            )) as unknown as mongoose.Types.ObjectId[];
         }
 
         // create and store the new post
@@ -46,14 +47,11 @@ const createPost = async (req: Request, res: Response) => {
             content: req.body.content,
             userID: req.body.currentUserID,
             date: new Date(),
-            mediaPaths,
+            mediaIDs,
         });
 
-        if (req.files) uploadFiles(req, res);
-        else {
-            // 201 Created
-            return res.sendStatus(201);
-        }
+        // 201 Created
+        return res.sendStatus(201);
     } catch (err: unknown) {
         // 500 Internal Server Error
         return res.status(500).json(err);
@@ -148,32 +146,38 @@ const updatePostById = async (req: Request, res: Response) => {
         // update the post based on the provided data
         if (req.body?.content) post.content = req.body.content;
 
-        const mediaPaths: string[] = [];
         if (req.files) {
             const reqFiles = req.files as fileUpload.FileArray;
             let fileCount = 0;
             Object.keys(reqFiles).forEach((key) => {
                 fileCount++;
+                if (fileCount > 10) {
+                    // 413 Payload Too Large
+                    return res
+                        .status(413)
+                        .send("Too many files. Maximum is 10");
+                }
                 const file = reqFiles[key] as fileUpload.UploadedFile;
-                file.name = uuidv4() + path.extname(file.name);
-                mediaPaths.push(file.name);
                 reqFiles[key] = file;
             });
-            if (fileCount > 1) {
-                // 413 Payload Too Large
-                return res.status(413).send("Too many files. Maximum is 10");
-            }
             req.files = reqFiles;
             req.body.image = req.body.video = req.body.audio = true;
+            const mediaIDs = (await uploadFiles(
+                req,
+                res
+            )) as unknown as mongoose.Types.ObjectId[];
+            const oldMedia = await File.find({
+                _id: { $in: [...post.mediaIDs] },
+            });
+            if (oldMedia)
+                await File.deleteMany({ _id: { $in: [...post.mediaIDs] } });
+            post.mediaIDs = mediaIDs;
         }
 
         await post.save();
 
-        if (req.files) uploadFiles(req, res);
-        else {
-            // 200 OK
-            return res.sendStatus(200);
-        }
+        // 200 OK
+        return res.sendStatus(200);
     } catch (err: unknown) {
         // 500 Internal Server Error
         return res.status(500).json(err);
@@ -201,10 +205,9 @@ const likePostById = async (req: Request, res: Response) => {
             post.likeIDs.push(req.body.currentUserID);
         } else {
             // remove the user ID from the like IDs array if it's already there
-            const newLikeIDs = post.likeIDs.filter(
+            post.likeIDs = post.likeIDs.filter(
                 (userID) => userID.toString() !== req.body.currentUserID
             );
-            post.likeIDs = newLikeIDs;
         }
 
         await post.save();
@@ -238,10 +241,17 @@ const deletePostById = async (req: Request, res: Response) => {
                     .send("Attempted deleting another user's post");
             }
 
+            // delete the attached media
+            const media = await File.find({
+                _id: { $in: [...post.mediaIDs] },
+            });
+            if (media)
+                await File.deleteMany({ _id: { $in: [...post.mediaIDs] } });
+
             // delete fields from the post but keep it in the database
             post.content = "[deleted]";
             post.userID = null;
-            post.mediaPaths = [];
+            post.mediaIDs = [];
 
             await post.save();
         }

@@ -1,7 +1,7 @@
 {
   "name": "the-lobby-backend",
-  "version": "1.4.0",
-  "description": "An open-source social media platform",
+  "version": "1.4.1",
+  "description": "Open source generalized social media backend ",
   "main": "./build/index.js",
   "scripts": {
     "build": "npx tsc",
@@ -19,8 +19,7 @@
     "express": "^4.18.2",
     "express-fileupload": "^1.4.0",
     "jsonwebtoken": "^9.0.1",
-    "mongoose": "^7.4.0",
-    "uuid": "^9.0.0"
+    "mongoose": "^7.4.0"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.0",
@@ -30,7 +29,6 @@
     "@types/express-fileupload": "^1.4.1",
     "@types/jsonwebtoken": "^9.0.2",
     "@types/node": "^20.4.4",
-    "@types/uuid": "^9.0.2",
     "concurrently": "^8.2.0",
     "nodemon": "^3.0.1",
     "typescript": "^5.1.6"

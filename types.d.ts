@@ -6,7 +6,7 @@ interface IUser {
     displayName: string;
     bio: string;
     location: string;
-    picturePath: string;
+    pictureID: mongoose.Types.ObjectId;
     followerIDs: mongoose.Types.ObjectId[];
     followingIDs: mongoose.Types.ObjectId[];
 }
@@ -17,7 +17,7 @@ interface IPublicUser {
     displayName: string;
     bio: string;
     location: string;
-    picturePath: string;
+    pictureID: mongoose.Types.ObjectId;
     followerIDs: mongoose.Types.ObjectId[];
     followingIDs: mongoose.Types.ObjectId[];
 }
@@ -26,7 +26,7 @@ interface IPost {
     content: string;
     userID: mongoose.Types.ObjectId;
     date: Date;
-    mediaPaths: string[];
+    mediaIDs: mongoose.Types.ObjectId[];
     likeIDs: mongoose.Types.ObjectId[];
     commentIDs: mongoose.Types.ObjectId[];
 }
@@ -44,4 +44,11 @@ interface ISearchResult {
     users?: IPublicUser[];
     posts?: IPost[];
     comments?: IComment[];
+}
+
+interface IFile {
+    name: string;
+    data: Buffer;
+    mimetype: string;
+    size: number;
 }

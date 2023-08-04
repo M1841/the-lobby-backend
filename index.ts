@@ -16,7 +16,7 @@ import usersRoute from "./routes/api/users";
 import postsRoute from "./routes/api/posts";
 import commentsRoute from "./routes/api/comments";
 import searchRoute from "./routes/api/search";
-import uploadsRoute from "./routes/uploads";
+import uploadsRoute from "./routes/api/uploads";
 
 // -------------------- INITIALIZATION -------------------- //
 dotenv.config();
@@ -55,7 +55,7 @@ app.use("/api/comments", commentsRoute);
 app.use("/api/search", searchRoute);
 
 // Uploaded Files
-app.use("/uploads", uploadsRoute);
+app.use("/api/uploads", uploadsRoute);
 
 // Root Redirect
 app.use("/*", rootRoute);

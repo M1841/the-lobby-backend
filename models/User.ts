@@ -26,9 +26,9 @@ const userSchema = new Schema<IUser>({
         type: String,
         default: "",
     },
-    picturePath: {
-        type: String,
-        default: "",
+    pictureID: {
+        type: mongoose.Types.ObjectId || null,
+        default: null,
     },
     refreshToken: {
         type: [String],

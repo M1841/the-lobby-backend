@@ -8,13 +8,14 @@ const postSchema = new Schema<IPost>({
     },
     userID: {
         type: mongoose.Types.ObjectId || null,
+        default: null,
     },
     date: {
         type: Date,
         required: true,
     },
-    mediaPaths: {
-        type: [String],
+    mediaIDs: {
+        type: [mongoose.Types.ObjectId],
         default: [],
     },
     likeIDs: {
