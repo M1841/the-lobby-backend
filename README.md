@@ -1,4 +1,4 @@
-# The Lobby Backend - version 1.4.1
+# The Lobby Backend - version 1.5.0
 
 ## Description
 
@@ -49,7 +49,7 @@ The Lobby is a long running project of mine, constantly being reinvented using n
         -   [DELETE /api/comments/:id](#delete-comment-by-id)
 
 -   [Changelog](#changelog)
-    -   [v1.4.1](#v141)
+    -   [v1.5.0](#v150)
     -   [v1.4.0](#v140)
     -   [v1.3.0](#v130)
     -   [v1.2.1](#v121)
