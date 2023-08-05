@@ -177,9 +177,9 @@ const updateUserById = async (req: Request, res: Response) => {
             return res.status(409).send(takenFields);
         }
 
-        if (req.body?.displayName) user.username = req.body.displayName;
-        if (req.body?.bio) user.username = req.body.bio;
-        if (req.body?.location) user.username = req.body.location;
+        if (req.body?.displayName) user.displayName = req.body.displayName;
+        if (req.body?.bio) user.bio = req.body.bio;
+        if (req.body?.location) user.location = req.body.location;
         if (req.body?.password)
             user.password = await bcrypt.hash(req.body.password, 10);
 

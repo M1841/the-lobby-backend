@@ -1,4 +1,4 @@
-# The Lobby Backend - version 1.5.0
+# The Lobby Backend - version 1.5.1
 
 ## Description
 
@@ -49,6 +49,7 @@ The Lobby is a long running project of mine, constantly being reinvented using n
         -   [DELETE /api/comments/:id](#delete-comment-by-id)
 
 -   [Changelog](#changelog)
+    -   [v1.5.1](#v151)
     -   [v1.5.0](#v150)
     -   [v1.4.0](#v140)
     -   [v1.3.0](#v130)
@@ -1228,6 +1229,13 @@ npm run dev
         ```
 
 ## Changelog
+
+### v1.5.1
+
+Release date: 2023-08-05
+
+-   Fixed a typo in the update user enpoint that caused only the usename and profile picture to be updated, even if the request body contained other fields
+-   Updated README
 
 ### v1.5.0
 
